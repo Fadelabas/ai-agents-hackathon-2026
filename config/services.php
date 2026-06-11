@@ -34,9 +34,9 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
-    'gemini' => [
+  'gemini' => [
     'key' => env('GEMINI_API_KEY'),
-    'model' => 'gemini-1.5-pro',
+    'model' => env('GEMINI_MODEL', 'gemini-3.5-flash'),
     'endpoint' => 'https://generativelanguage.googleapis.com/v1beta/models/',
 ],
 
