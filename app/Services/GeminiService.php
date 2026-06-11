@@ -124,7 +124,7 @@ class GeminiService
      * The system prompt — defines AI behavior.
      * This is the most important text in the project.
      */
-    private function getSystemPrompt(): string
+private function getSystemPrompt(): string
 {
     return <<<PROMPT
 You are Jibli, an AI-powered delivery dispatch assistant for Lebanon.

@@ -105,20 +105,20 @@ class ChatController extends Controller
     /**
      * Customer responded to price confirmation.
      */
-    private function handleConfirmation(
-        $session,
-        string $message,
-        string $token
-    ) {
-        $this->conversation->addMessage($session, 'user', $message);
+   private function handleConfirmation(
+    $session,
+    string $message,
+    string $token
+) {
+    $this->conversation->addMessage($session, 'user', $message);
 
-        // ── Customer confirmed ────────────────────────────────
-        if ($this->conversation->isConfirmation($message)) {
+    // ── Customer confirmed ────────────────────────────────
+    if ($this->conversation->isConfirmation($message)) {
 
-            $extracted = $session->extracted_data;
+        $extracted = $session->extracted_data;
 
-            // Create the order
-          $order = $this->order->createOrder([
+        // Create the order
+        $order = $this->order->createOrder([
             'ai_data' => [
                 'task_type'      => $extracted['task_type'],
                 'area_text'      => $extracted['area_text'],
@@ -136,67 +136,60 @@ class ChatController extends Controller
         // Link order to session
         $this->conversation->linkOrder($session, $order->id);
 
-            // Update session token on order
-            
+        // Reset awaiting confirmation
+        $this->conversation->updateExtracted($session, [
+            'awaiting_confirmation' => false,
+        ]);
 
-            // Link order to session
-            $this->conversation->linkOrder($session, $order->id);
+        // Assign driver
+        $driverMsg = $this->assignDriver($order);
 
-            // Reset awaiting confirmation
-            $this->conversation->updateExtracted($session, [
-                'awaiting_confirmation' => false,
-            ]);
-
-            // Assign driver
-            $driverMsg = $this->assignDriver($order);
-
-            $replyMsg = "🎉 Order confirmed! We are finding a driver for you.\n" . $driverMsg;
-            $this->conversation->addMessage($session, 'model', $replyMsg);
-
-            return response()->json([
-                'type'     => 'order_created',
-                'message'  => $replyMsg,
-                'order_id' => $order->id,
-                'token'    => $token,
-            ]);
-        }
-
-        // ── Customer rejected ─────────────────────────────────
-        if ($this->conversation->isRejection($message)) {
-
-            $this->conversation->updateExtracted($session, [
-                'awaiting_confirmation' => false,
-                'task_type'             => null,
-                'area_text'             => null,
-                'exact_address'         => null,
-                'customer_phone'        => null,
-                'price'                 => null,
-                'geo'                   => null,
-            ]);
-
-            // Clear history to start fresh
-            $session->history = [];
-            $session->save();
-
-            $replyMsg = "No problem! Let's start over. What do you need?";
-            $this->conversation->addMessage($session, 'model', $replyMsg);
-
-            return response()->json([
-                'type'    => 'cancelled',
-                'message' => $replyMsg,
-            ]);
-        }
-
-        // ── Unclear response ──────────────────────────────────
-        $replyMsg = "Please reply with *yes* to confirm or *no* to cancel.";
+        $replyMsg = "🎉 Order confirmed! We are finding a driver for you.\n" . $driverMsg;
         $this->conversation->addMessage($session, 'model', $replyMsg);
 
         return response()->json([
-            'type'    => 'confirmation',
+            'type'     => 'order_created',
+            'message'  => $replyMsg,
+            'order_id' => $order->id,
+            'token'    => $token,
+        ]);
+    }
+
+    // ── Customer rejected ─────────────────────────────────
+    if ($this->conversation->isRejection($message)) {
+
+        $this->conversation->updateExtracted($session, [
+            'awaiting_confirmation' => false,
+            'task_type'             => null,
+            'area_text'             => null,
+            'exact_address'         => null,
+            'customer_phone'        => null,
+            'price'                 => null,
+            'geo'                   => null,
+        ]);
+
+        // Clear history to start fresh
+        $session->history = [];
+        $session->save();
+
+        $replyMsg = "No problem! Let's start over. What do you need?";
+        $this->conversation->addMessage($session, 'model', $replyMsg);
+
+        return response()->json([
+            'type'    => 'cancelled',
             'message' => $replyMsg,
         ]);
     }
 
+    // ── Unclear response ──────────────────────────────────
+    $replyMsg = "Please reply with *yes* to confirm or *no* to cancel.";
+    $this->conversation->addMessage($session, 'model', $replyMsg);
+
+    return response()->json([
+        'type'    => 'confirmation',
+        'message' => $replyMsg,
+    ]);
+}
     /**
      * Attempt driver assignment and return status message.
      */

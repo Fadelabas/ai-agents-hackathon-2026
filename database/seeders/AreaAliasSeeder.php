@@ -160,7 +160,226 @@ class AreaAliasSeeder extends Seeder
             ['area_id' => $a['Roumieh'], 'alias' => 'rumiyeh',            'language_type' => 'typo'],
             ['area_id' => $a['Roumieh'], 'alias' => 'romieh',             'language_type' => 'typo'],
             ['area_id' => $a['Roumieh'], 'alias' => 'romiyeh',            'language_type' => 'typo'],
+            // ══════════════════════════════════════════════════════
+            // COMPOUND ALIASES — CITY + NEIGHBORHOOD COMBINATIONS
+            // ══════════════════════════════════════════════════════
 
+            // Beirut + Neighborhoods
+            ['area_id' => $a['Hamra'],           'alias' => 'beirut hamra',           'language_type' => 'english'],
+            ['area_id' => $a['Hamra'],           'alias' => 'bierut hamra',           'language_type' => 'typo'],
+            ['area_id' => $a['Hamra'],           'alias' => 'hamra beirut',           'language_type' => 'english'],
+            ['area_id' => $a['Hamra'],           'alias' => 'el hamra beirut',        'language_type' => 'franco'],
+            ['area_id' => $a['Hamra'],           'alias' => 'l7amra beirut',          'language_type' => 'franco'],
+            ['area_id' => $a['Achrafieh'],       'alias' => 'beirut achrafieh',       'language_type' => 'english'],
+            ['area_id' => $a['Achrafieh'],       'alias' => 'achrafieh beirut',       'language_type' => 'english'],
+            ['area_id' => $a['Verdun'],          'alias' => 'beirut verdun',          'language_type' => 'english'],
+            ['area_id' => $a['Verdun'],          'alias' => 'verdun beirut',          'language_type' => 'english'],
+            ['area_id' => $a['Badaro'],          'alias' => 'beirut badaro',          'language_type' => 'english'],
+            ['area_id' => $a['Badaro'],          'alias' => 'badaro beirut',          'language_type' => 'english'],
+            ['area_id' => $a['Gemmayzeh'],       'alias' => 'beirut gemmayzeh',       'language_type' => 'english'],
+            ['area_id' => $a['Gemmayzeh'],       'alias' => 'gemmayzeh beirut',       'language_type' => 'english'],
+            ['area_id' => $a['Raouche'],         'alias' => 'beirut raouche',         'language_type' => 'english'],
+            ['area_id' => $a['Raouche'],         'alias' => 'raouche beirut',         'language_type' => 'english'],
+            ['area_id' => $a['Mar Mikhael'],     'alias' => 'beirut mar mikhael',     'language_type' => 'english'],
+            ['area_id' => $a['Mar Mikhael'],     'alias' => 'mar mikhael beirut',     'language_type' => 'english'],
+            ['area_id' => $a['Downtown Beirut'], 'alias' => 'beirut downtown',        'language_type' => 'english'],
+            ['area_id' => $a['Downtown Beirut'], 'alias' => 'wsat el madine',         'language_type' => 'franco'],
+            ['area_id' => $a['Downtown Beirut'], 'alias' => 'wsat beirut',            'language_type' => 'franco'],
+            ['area_id' => $a['Corniche'],        'alias' => 'beirut corniche',        'language_type' => 'english'],
+            ['area_id' => $a['Corniche'],        'alias' => 'corniche beirut',        'language_type' => 'english'],
+            ['area_id' => $a['Bourj Hammoud'],   'alias' => 'beirut bourj hammoud',   'language_type' => 'english'],
+            ['area_id' => $a['Zarif'],           'alias' => 'beirut zarif',           'language_type' => 'english'],
+            ['area_id' => $a['Sanayeh'],         'alias' => 'beirut sanayeh',         'language_type' => 'english'],
+
+            // ══════════════════════════════════════════════════════
+            // MOUNT LEBANON COMPOUND ALIASES
+            // ══════════════════════════════════════════════════════
+
+            // Baabda
+            ['area_id' => $a['Hazmieh'],     'alias' => 'baabda hazmieh',         'language_type' => 'english'],
+            ['area_id' => $a['Hazmieh'],     'alias' => 'hazmieh baabda district','language_type' => 'english'],
+            ['area_id' => $a['Hadath'],      'alias' => 'baabda hadath',          'language_type' => 'english'],
+            ['area_id' => $a['Hadath'],      'alias' => 'hadath baabda',          'language_type' => 'english'],
+            ['area_id' => $a['Choueifat'],   'alias' => 'baabda choueifat',       'language_type' => 'english'],
+            ['area_id' => $a['Choueifat'],   'alias' => 'choueifat baabda',       'language_type' => 'english'],
+            ['area_id' => $a['Khalde'],      'alias' => 'baabda khalde',          'language_type' => 'english'],
+            ['area_id' => $a['Khalde'],      'alias' => 'khalde beirut',          'language_type' => 'english'],
+            ['area_id' => $a['Kfarchima'],   'alias' => 'baabda kfarchima',       'language_type' => 'english'],
+            ['area_id' => $a['Yarze'],       'alias' => 'baabda yarze',           'language_type' => 'english'],
+            ['area_id' => $a['Bchamoun'],    'alias' => 'baabda bchamoun',        'language_type' => 'english'],
+
+            // Metn
+            ['area_id' => $a['Fanar'],       'alias' => 'metn fanar',             'language_type' => 'english'],
+            ['area_id' => $a['Fanar'],       'alias' => 'fanar metn lebanon',     'language_type' => 'english'],
+            ['area_id' => $a['Dekwaneh'],    'alias' => 'metn dekwaneh',          'language_type' => 'english'],
+            ['area_id' => $a['Dekwaneh'],    'alias' => 'dekwaneh metn',          'language_type' => 'english'],
+            ['area_id' => $a['Jdeideh'],     'alias' => 'metn jdeideh',           'language_type' => 'english'],
+            ['area_id' => $a['Jdeideh'],     'alias' => 'jdeideh metn lebanon',   'language_type' => 'english'],
+            ['area_id' => $a['Antelias'],    'alias' => 'metn antelias',          'language_type' => 'english'],
+            ['area_id' => $a['Antelias'],    'alias' => 'antelias metn',          'language_type' => 'english'],
+            ['area_id' => $a['Zalka'],       'alias' => 'metn zalka',             'language_type' => 'english'],
+            ['area_id' => $a['Zalka'],       'alias' => 'zalka metn lebanon',     'language_type' => 'english'],
+            ['area_id' => $a['Dora'],        'alias' => 'metn dora',              'language_type' => 'english'],
+            ['area_id' => $a['Dora'],        'alias' => 'dora metn',              'language_type' => 'english'],
+            ['area_id' => $a['Sin El Fil'],  'alias' => 'metn sin el fil',        'language_type' => 'english'],
+            ['area_id' => $a['Sin El Fil'],  'alias' => 'sin el fil metn',        'language_type' => 'english'],
+            ['area_id' => $a['Bauchrieh'],   'alias' => 'metn bauchrieh',         'language_type' => 'english'],
+            ['area_id' => $a['Bauchrieh'],   'alias' => 'bauchrieh metn',         'language_type' => 'english'],
+            ['area_id' => $a['Mkalles'],     'alias' => 'metn mkalles',           'language_type' => 'english'],
+            ['area_id' => $a['Mkalles'],     'alias' => 'mkalles metn',           'language_type' => 'english'],
+            ['area_id' => $a['Ain Saadeh'],  'alias' => 'metn ain saadeh',        'language_type' => 'english'],
+            ['area_id' => $a['Roumieh'],     'alias' => 'metn roumieh',           'language_type' => 'english'],
+            ['area_id' => $a['Mansourieh'], 'alias' => 'metn mansourieh',         'language_type' => 'english'],
+            ['area_id' => $a['Jal El Dib'],  'alias' => 'metn jal el dib',        'language_type' => 'english'],
+            ['area_id' => $a['Naccache'],    'alias' => 'metn naccache',          'language_type' => 'english'],
+            ['area_id' => $a['Bsalim'],      'alias' => 'metn bsalim',            'language_type' => 'english'],
+            ['area_id' => $a['Beit Mery'],   'alias' => 'metn beit mery',         'language_type' => 'english'],
+            ['area_id' => $a['Broumana'],    'alias' => 'metn broumana',          'language_type' => 'english'],
+
+            // Kesrouan
+            ['area_id' => $a['Jounieh'],     'alias' => 'kesrouan jounieh',       'language_type' => 'english'],
+            ['area_id' => $a['Jounieh'],     'alias' => 'jounieh kesrouan',       'language_type' => 'english'],
+            ['area_id' => $a['Jounieh'],     'alias' => 'jounieh lebanon',        'language_type' => 'english'],
+            ['area_id' => $a['Dbayeh'],      'alias' => 'kesrouan dbayeh',        'language_type' => 'english'],
+            ['area_id' => $a['Dbayeh'],      'alias' => 'dbayeh kesrouan',        'language_type' => 'english'],
+            ['area_id' => $a['Kaslik'],      'alias' => 'kesrouan kaslik',        'language_type' => 'english'],
+            ['area_id' => $a['Kaslik'],      'alias' => 'kaslik jounieh',         'language_type' => 'english'],
+            ['area_id' => $a['Zouk Mosbeh'], 'alias' => 'kesrouan zouk',          'language_type' => 'english'],
+            ['area_id' => $a['Zouk Mosbeh'], 'alias' => 'zouk kesrouan',          'language_type' => 'english'],
+            ['area_id' => $a['Rabieh'],      'alias' => 'kesrouan rabieh',        'language_type' => 'english'],
+            ['area_id' => $a['Faraya'],      'alias' => 'kesrouan faraya',        'language_type' => 'english'],
+
+            // Aley
+            ['area_id' => $a['Aley'],        'alias' => 'aley mount lebanon',     'language_type' => 'english'],
+            ['area_id' => $a['Bhamdoun'],    'alias' => 'aley bhamdoun',          'language_type' => 'english'],
+            ['area_id' => $a['Bhamdoun'],    'alias' => 'bhamdoun aley',          'language_type' => 'english'],
+            ['area_id' => $a['Sofar'],       'alias' => 'aley sofar',             'language_type' => 'english'],
+
+            // Chouf
+            ['area_id' => $a['Damour'],      'alias' => 'chouf damour',           'language_type' => 'english'],
+            ['area_id' => $a['Damour'],      'alias' => 'damour chouf',           'language_type' => 'english'],
+
+            // ══════════════════════════════════════════════════════
+            // BEKAA COMPOUND ALIASES
+            // ══════════════════════════════════════════════════════
+
+            ['area_id' => $a['Zahleh'],      'alias' => 'bekaa zahleh',           'language_type' => 'english'],
+            ['area_id' => $a['Zahleh'],      'alias' => 'zahleh bekaa lebanon',   'language_type' => 'english'],
+            ['area_id' => $a['Zahleh'],      'alias' => 'zahle bekaa lebanon',    'language_type' => 'english'],
+            ['area_id' => $a['Hazerta'],     'alias' => 'bekaa hazerta',          'language_type' => 'english'],
+            ['area_id' => $a['Hazerta'],     'alias' => 'hazerta bekaa',          'language_type' => 'english'],
+            ['area_id' => $a['Hazerta'],     'alias' => 'hazerta zahleh',         'language_type' => 'english'],
+            ['area_id' => $a['Hazerta'],     'alias' => 'zahleh hazerta',         'language_type' => 'english'],
+            ['area_id' => $a['Chtaura'],     'alias' => 'bekaa chtaura',          'language_type' => 'english'],
+            ['area_id' => $a['Chtaura'],     'alias' => 'chtaura bekaa',          'language_type' => 'english'],
+            ['area_id' => $a['Bar Elias'],   'alias' => 'bekaa bar elias',        'language_type' => 'english'],
+            ['area_id' => $a['Bar Elias'],   'alias' => 'bar elias bekaa lebanon','language_type' => 'english'],
+            ['area_id' => $a['Baalbek'],     'alias' => 'bekaa baalbek',          'language_type' => 'english'],
+            ['area_id' => $a['Baalbek'],     'alias' => 'baalbek bekaa',          'language_type' => 'english'],
+            ['area_id' => $a['Baalbek'],     'alias' => 'baalbek lebanon',        'language_type' => 'english'],
+            ['area_id' => $a['Hermel'],      'alias' => 'bekaa hermel',           'language_type' => 'english'],
+            ['area_id' => $a['Hermel'],      'alias' => 'hermel bekaa',           'language_type' => 'english'],
+            ['area_id' => $a['Saadnayel'],   'alias' => 'bekaa saadnayel',        'language_type' => 'english'],
+            ['area_id' => $a['Taanayel'],    'alias' => 'bekaa taanayel',         'language_type' => 'english'],
+            ['area_id' => $a['Riyaq'],       'alias' => 'bekaa riyaq',            'language_type' => 'english'],
+            ['area_id' => $a['Riyaq'],       'alias' => 'riyaq bekaa',            'language_type' => 'english'],
+            ['area_id' => $a['Terbol'],      'alias' => 'bekaa terbol',           'language_type' => 'english'],
+            ['area_id' => $a['Taalabaya'],   'alias' => 'bekaa taalabaya',        'language_type' => 'english'],
+            ['area_id' => $a['Qabb Elias'],  'alias' => 'bekaa qabb elias',       'language_type' => 'english'],
+            ['area_id' => $a['Jdita'],       'alias' => 'bekaa jdita',            'language_type' => 'english'],
+
+            // ══════════════════════════════════════════════════════
+            // NORTH LEBANON COMPOUND ALIASES
+            // ══════════════════════════════════════════════════════
+
+            ['area_id' => $a['Tripoli'],     'alias' => 'north tripoli',          'language_type' => 'english'],
+            ['area_id' => $a['Tripoli'],     'alias' => 'tripoli north lebanon',  'language_type' => 'english'],
+            ['area_id' => $a['Tripoli'],     'alias' => 'tripoli lebanon',        'language_type' => 'english'],
+            ['area_id' => $a['Mina'],        'alias' => 'tripoli mina',           'language_type' => 'english'],
+            ['area_id' => $a['Mina'],        'alias' => 'mina tripoli',           'language_type' => 'english'],
+            ['area_id' => $a['Batroun'],     'alias' => 'north batroun',          'language_type' => 'english'],
+            ['area_id' => $a['Batroun'],     'alias' => 'batroun north lebanon',  'language_type' => 'english'],
+            ['area_id' => $a['Batroun'],     'alias' => 'batroun lebanon',        'language_type' => 'english'],
+            ['area_id' => $a['Jbeil'],       'alias' => 'north jbeil',            'language_type' => 'english'],
+            ['area_id' => $a['Jbeil'],       'alias' => 'jbeil north lebanon',    'language_type' => 'english'],
+            ['area_id' => $a['Jbeil'],       'alias' => 'byblos lebanon',         'language_type' => 'english'],
+            ['area_id' => $a['Zgharta'],     'alias' => 'north zgharta',          'language_type' => 'english'],
+            ['area_id' => $a['Zgharta'],     'alias' => 'zgharta north lebanon',  'language_type' => 'english'],
+            ['area_id' => $a['Bcharre'],     'alias' => 'north bcharre',          'language_type' => 'english'],
+            ['area_id' => $a['Bcharre'],     'alias' => 'bcharre north lebanon',  'language_type' => 'english'],
+            ['area_id' => $a['Halba'],       'alias' => 'akkar halba',            'language_type' => 'english'],
+            ['area_id' => $a['Halba'],       'alias' => 'halba akkar',            'language_type' => 'english'],
+
+            // ══════════════════════════════════════════════════════
+            // SOUTH LEBANON COMPOUND ALIASES
+            // ══════════════════════════════════════════════════════
+
+            ['area_id' => $a['Sidon'],       'alias' => 'south sidon',            'language_type' => 'english'],
+            ['area_id' => $a['Sidon'],       'alias' => 'sidon south lebanon',    'language_type' => 'english'],
+            ['area_id' => $a['Sidon'],       'alias' => 'saida south lebanon',    'language_type' => 'english'],
+            ['area_id' => $a['Sidon'],       'alias' => 'sidon lebanon',          'language_type' => 'english'],
+            ['area_id' => $a['Tyre'],        'alias' => 'south tyre',             'language_type' => 'english'],
+            ['area_id' => $a['Tyre'],        'alias' => 'tyre south lebanon',     'language_type' => 'english'],
+            ['area_id' => $a['Tyre'],        'alias' => 'sour south lebanon',     'language_type' => 'english'],
+            ['area_id' => $a['Tyre'],        'alias' => 'tyre lebanon',           'language_type' => 'english'],
+            ['area_id' => $a['Nabatieh'],    'alias' => 'south nabatieh',         'language_type' => 'english'],
+            ['area_id' => $a['Nabatieh'],    'alias' => 'nabatieh south lebanon', 'language_type' => 'english'],
+            ['area_id' => $a['Nabatieh'],    'alias' => 'nabatieh lebanon',       'language_type' => 'english'],
+            ['area_id' => $a['Bint Jbeil'],  'alias' => 'south bint jbeil',       'language_type' => 'english'],
+            ['area_id' => $a['Bint Jbeil'],  'alias' => 'bint jbeil south',       'language_type' => 'english'],
+            ['area_id' => $a['Marjeyoun'],   'alias' => 'south marjeyoun',        'language_type' => 'english'],
+            ['area_id' => $a['Jezzine'],     'alias' => 'south jezzine',          'language_type' => 'english'],
+            ['area_id' => $a['Jezzine'],     'alias' => 'jezzine south lebanon',  'language_type' => 'english'],
+
+            // ══════════════════════════════════════════════════════
+            // FRANCO-ARABIC COMPOUND ALIASES
+            // ══════════════════════════════════════════════════════
+
+            ['area_id' => $a['Hamra'],       'alias' => 'beirut l7amra',          'language_type' => 'franco'],
+            ['area_id' => $a['Hamra'],       'alias' => 'l7amra bbeirut',         'language_type' => 'franco'],
+            ['area_id' => $a['Achrafieh'],   'alias' => 'bbeirut l2achrafieh',    'language_type' => 'franco'],
+            ['area_id' => $a['Hazmieh'],     'alias' => 'bbeirut 7azmiye',        'language_type' => 'franco'],
+            ['area_id' => $a['Dekwaneh'],    'alias' => 'el metn dkwaneh',        'language_type' => 'franco'],
+            ['area_id' => $a['Fanar'],       'alias' => 'metn l fanar',           'language_type' => 'franco'],
+            ['area_id' => $a['Jounieh'],     'alias' => 'kesrwen jounieh',        'language_type' => 'franco'],
+            ['area_id' => $a['Zahleh'],      'alias' => 'l be2a3 zahle',          'language_type' => 'franco'],
+            ['area_id' => $a['Hazerta'],     'alias' => 'l be2a3 hazerta',        'language_type' => 'franco'],
+            ['area_id' => $a['Baalbek'],     'alias' => 'l be2a3 ba3lbek',        'language_type' => 'franco'],
+            ['area_id' => $a['Tripoli'],     'alias' => 'trablus l shemel',       'language_type' => 'franco'],
+            ['area_id' => $a['Sidon'],       'alias' => 'sayda l jnoub',          'language_type' => 'franco'],
+            ['area_id' => $a['Tyre'],        'alias' => 'sour l jnoub',           'language_type' => 'franco'],
+
+            // ══════════════════════════════════════════════════════
+            // ARABIC COMPOUND ALIASES
+            // ══════════════════════════════════════════════════════
+
+            ['area_id' => $a['Hamra'],       'alias' => 'بيروت الحمرا',           'language_type' => 'arabic'],
+            ['area_id' => $a['Hamra'],       'alias' => 'الحمرا بيروت',           'language_type' => 'arabic'],
+            ['area_id' => $a['Achrafieh'],   'alias' => 'بيروت الأشرفية',         'language_type' => 'arabic'],
+            ['area_id' => $a['Achrafieh'],   'alias' => 'الأشرفية بيروت',         'language_type' => 'arabic'],
+            ['area_id' => $a['Verdun'],      'alias' => 'بيروت فردان',            'language_type' => 'arabic'],
+            ['area_id' => $a['Hazmieh'],     'alias' => 'بعبدا الحازمية',         'language_type' => 'arabic'],
+            ['area_id' => $a['Hazmieh'],     'alias' => 'الحازمية بعبدا',         'language_type' => 'arabic'],
+            ['area_id' => $a['Fanar'],       'alias' => 'المتن الفنار',           'language_type' => 'arabic'],
+            ['area_id' => $a['Fanar'],       'alias' => 'الفنار المتن',           'language_type' => 'arabic'],
+            ['area_id' => $a['Dekwaneh'],    'alias' => 'المتن الدكوانة',         'language_type' => 'arabic'],
+            ['area_id' => $a['Jounieh'],     'alias' => 'كسروان جونية',           'language_type' => 'arabic'],
+            ['area_id' => $a['Jounieh'],     'alias' => 'جونية كسروان',           'language_type' => 'arabic'],
+            ['area_id' => $a['Zahleh'],      'alias' => 'البقاع زحلة',            'language_type' => 'arabic'],
+            ['area_id' => $a['Zahleh'],      'alias' => 'زحلة البقاع',            'language_type' => 'arabic'],
+            ['area_id' => $a['Hazerta'],     'alias' => 'البقاع حزرتا',           'language_type' => 'arabic'],
+            ['area_id' => $a['Hazerta'],     'alias' => 'حزرتا البقاع',           'language_type' => 'arabic'],
+            ['area_id' => $a['Baalbek'],     'alias' => 'البقاع بعلبك',           'language_type' => 'arabic'],
+            ['area_id' => $a['Baalbek'],     'alias' => 'بعلبك البقاع',           'language_type' => 'arabic'],
+            ['area_id' => $a['Tripoli'],     'alias' => 'الشمال طرابلس',          'language_type' => 'arabic'],
+            ['area_id' => $a['Tripoli'],     'alias' => 'طرابلس الشمال',          'language_type' => 'arabic'],
+            ['area_id' => $a['Sidon'],       'alias' => 'الجنوب صيدا',            'language_type' => 'arabic'],
+            ['area_id' => $a['Sidon'],       'alias' => 'صيدا الجنوب',            'language_type' => 'arabic'],
+            ['area_id' => $a['Tyre'],        'alias' => 'الجنوب صور',             'language_type' => 'arabic'],
+            ['area_id' => $a['Tyre'],        'alias' => 'صور الجنوب',             'language_type' => 'arabic'],
+            ['area_id' => $a['Nabatieh'],    'alias' => 'النبطية الجنوب',         'language_type' => 'arabic'],
+            ['area_id' => $a['Antelias'],    'alias' => 'المتن أنطلياس',          'language_type' => 'arabic'],
+            ['area_id' => $a['Antelias'],    'alias' => 'أنطلياس المتن',          'language_type' => 'arabic'],
             // Lebanese University Fanar
             ['area_id' => $a['Lebanese University Fanar'], 'alias' => 'Lebanese University Fanar',  'language_type' => 'english'],
             ['area_id' => $a['Lebanese University Fanar'], 'alias' => 'lebanese university fanar',  'language_type' => 'english'],

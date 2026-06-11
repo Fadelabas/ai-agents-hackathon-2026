@@ -38,7 +38,7 @@ class OrderService
     /**
      * Create the order after customer confirms price.
      */
-  public function createOrder(array $prepared): Order
+ public function createOrder(array $prepared): Order
 {
     $aiData  = $prepared['ai_data'];
     $geo     = $prepared['geo'];
