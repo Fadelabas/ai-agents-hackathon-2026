@@ -39,8 +39,8 @@
 @section('scripts')
 <script>
 const TOKEN = '{{ session()->getId() }}';
-let polling = null;
-let currentOrderId = null;
+let polling  = null;
+let orderToken = null;
 
 async function sendMessage() {
     const input   = document.getElementById('messageInput');
@@ -66,7 +66,7 @@ async function sendMessage() {
 
         if (data.type === 'order_created') {
             appendMessage(data.message, 'bot');
-            currentOrderId = data.order_id;
+            orderToken = data.token;
             showStatusPanel();
             startPolling(data.token);
             disableInput();
@@ -75,6 +75,7 @@ async function sendMessage() {
 
         if (data.type === 'cancelled') {
             appendMessage(data.message, 'bot');
+            hideStatusPanel();
             enableInput();
             return;
         }
@@ -83,18 +84,20 @@ async function sendMessage() {
 
     } catch (err) {
         hideTyping();
-        appendMessage('Connection error. Please try again.', 'bot');
+        appendMessage('⏳ Jibli is temporarily busy. Please try again in a few seconds.', 'bot');
     }
 }
 
 function appendMessage(text, sender) {
-    const box  = document.getElementById('chatBox');
-    const div  = document.createElement('div');
+    const box    = document.getElementById('chatBox');
+    const div    = document.createElement('div');
     div.className = `message ${sender === 'user' ? 'user-message' : 'bot-message'}`;
 
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
-    bubble.innerHTML = text.replace(/\n/g, '<br>').replace(/\*(.*?)\*/g, '<strong>$1</strong>');
+    bubble.innerHTML = text
+        .replace(/\n/g, '<br>')
+        .replace(/\*(.*?)\*/g, '<strong>$1</strong>');
 
     div.appendChild(bubble);
     box.appendChild(div);
@@ -114,18 +117,24 @@ function showStatusPanel() {
     document.getElementById('statusPanel').style.display = 'flex';
 }
 
+function hideStatusPanel() {
+    document.getElementById('statusPanel').style.display = 'none';
+}
+
 function disableInput() {
     document.getElementById('messageInput').disabled = true;
-    document.getElementById('sendBtn').disabled = true;
+    document.getElementById('sendBtn').disabled      = true;
 }
 
 function enableInput() {
     document.getElementById('messageInput').disabled = false;
-    document.getElementById('sendBtn').disabled = false;
+    document.getElementById('sendBtn').disabled      = false;
     document.getElementById('messageInput').focus();
 }
 
 function startPolling(token) {
+    if (polling) clearInterval(polling);
+
     polling = setInterval(async () => {
         try {
             const res  = await fetch(`/order/status/${token}`);
@@ -136,31 +145,60 @@ function startPolling(token) {
                 clearInterval(polling);
             }
         } catch (e) {}
-    }, 5000);
+    }, 4000);
 }
 
 function updateStatus(data) {
     const el = document.getElementById('statusContent');
 
-    const desc = data.order_description
-        ? `<br><small style="color:#888;">📦 ${data.order_description}</small>`
-        : '';
+    const desc    = data.order_description ? `<br><small style="color:#888;">📦 ${data.order_description}</small>` : '';
+    const area    = data.area_name    ? `<br><small style="color:#888;">📍 ${data.area_name}</small>` : '';
+    const address = data.exact_address ? `<br><small style="color:#888;">🏠 ${data.exact_address}</small>` : '';
+    const price   = data.price        ? `<br><small style="color:#888;">💰 $${data.price}</small>` : '';
+
+    if (data.status === 'not_found') {
+        el.innerHTML = '🔍 Looking for your order...';
+        return;
+    }
 
     if (data.status === 'pending') {
-        el.innerHTML = `🔍 Finding a driver for you...${desc}`;
-    } else if (data.status === 'driver_assigned' || data.status === 'in_progress') {
         el.innerHTML = `
-            ✅ <strong>Driver Assigned!</strong>${desc}<br><br>
+            🔍 <strong>Finding a driver for you...</strong>
+            ${desc}${area}${address}${price}
+        `;
+        return;
+    }
+
+    if (data.status === 'driver_assigned' || data.status === 'in_progress') {
+        el.innerHTML = `
+            ✅ <strong>Driver Assigned!</strong>
+            ${desc}${area}
+            <br><br>
             👤 <strong>${data.driver_name}</strong><br>
-            📞 <a href="tel:${data.driver_phone}">${data.driver_phone}</a><br>
+            📞 <a href="tel:${data.driver_phone}" style="color:#6c63ff;">${data.driver_phone}</a><br>
             💰 Delivery Fee: <strong>$${data.price}</strong>
         `;
-    } else if (data.status === 'completed') {
-        el.innerHTML = `✅ <strong>Delivered!</strong> Thank you for using Jibli 🎉${desc}`;
+        return;
+    }
+
+    if (data.status === 'completed') {
+        el.innerHTML = `
+            ✅ <strong>Order Delivered!</strong><br>
+            Thank you for using Jibli 🎉
+            ${desc}
+        `;
         clearInterval(polling);
+        return;
+    }
+
+    if (data.status === 'cancelled') {
+        el.innerHTML = '❌ Order cancelled.';
+        clearInterval(polling);
+        return;
     }
 }
-// Send on Enter key
+
+// Send on Enter
 document.getElementById('messageInput').addEventListener('keypress', function(e) {
     if (e.key === 'Enter') sendMessage();
 });
