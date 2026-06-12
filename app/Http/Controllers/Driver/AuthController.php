@@ -35,9 +35,9 @@ class AuthController extends Controller
         return redirect()->route('driver.dashboard');
     }
 
-    public function logout()
-    {
-        session()->forget('driver_id');
-        return redirect()->route('driver.login');
-    }
+   public function logout()
+{
+    session()->forget('driver_id');
+    return redirect()->route('driver.login')->with('success', 'You have been logged out.');
+}
 }

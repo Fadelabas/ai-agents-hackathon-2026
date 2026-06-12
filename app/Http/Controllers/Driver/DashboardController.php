@@ -14,27 +14,31 @@ class DashboardController extends Controller
         private DriverAssignmentService $assignment
     ) {}
 
-    public function index()
-    {
-        $driver = Driver::findOrFail(session('driver_id'));
+   public function index()
+{
+    $driver = Driver::find(session('driver_id'));
 
-        // Pending offers for this driver
-        $pendingOffer = DriverOffer::where('driver_id', $driver->id)
-            ->where('status', 'pending')
-            ->with('order')
-            ->latest()
-            ->first();
-
-        // Active accepted order
-        $activeOffer = DriverOffer::where('driver_id', $driver->id)
-            ->where('status', 'accepted')
-            ->with('order')
-            ->latest()
-            ->first();
-
-        return view('driver.dashboard', compact('driver', 'pendingOffer', 'activeOffer'));
+    // Driver no longer exists (e.g. after reseeding)
+    if (!$driver) {
+        session()->forget('driver_id');
+        return redirect()->route('driver.login')
+            ->with('error', 'Session expired. Please log in again.');
     }
 
+    $pendingOffer = DriverOffer::where('driver_id', $driver->id)
+        ->where('status', 'pending')
+        ->with('order')
+        ->latest()
+        ->first();
+
+    $activeOffer = DriverOffer::where('driver_id', $driver->id)
+        ->where('status', 'accepted')
+        ->with('order')
+        ->latest()
+        ->first();
+
+    return view('driver.dashboard', compact('driver', 'pendingOffer', 'activeOffer'));
+}
     public function accept(DriverOffer $offer)
     {
         if ($offer->driver_id !== session('driver_id')) {

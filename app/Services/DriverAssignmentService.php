@@ -2,30 +2,26 @@
 
 namespace App\Services;
 
+use App\Models\District;
 use App\Models\Driver;
 use App\Models\DriverOffer;
 use App\Models\Order;
+use Illuminate\Support\Facades\Log;
 
 class DriverAssignmentService
 {
     /**
-     * Find available driver in same district and create offer.
+     * Assign driver using fallback chain:
+     * same district → same governorate → any available
      */
     public function assign(Order $order): ?DriverOffer
     {
-        if (!$order->district_id) {
-            return null;
-        }
-
-        $driver = Driver::where('district_id', $order->district_id)
-            ->where('status', 'available')
-            ->first();
+        $driver = $this->findDriver($order);
 
         if (!$driver) {
             return null;
         }
 
-        // Create the offer
         $offer = DriverOffer::create([
             'order_id'   => $order->id,
             'driver_id'  => $driver->id,
@@ -33,10 +29,62 @@ class DriverAssignmentService
             'offered_at' => now(),
         ]);
 
-        // Mark driver as busy
         $driver->update(['status' => 'busy']);
 
         return $offer;
+    }
+
+    /**
+     * Find best available driver using fallback chain.
+     */
+    private function findDriver(Order $order): ?Driver
+    {
+        // ── Level 1: Same district ────────────────────────────
+        if ($order->district_id) {
+            $driver = Driver::where('district_id', $order->district_id)
+                ->where('status', 'available')
+                ->first();
+
+            if ($driver) {
+                Log::info("Jibli: Driver assigned from district [{$order->district_name}]", [
+                    'driver' => $driver->name,
+                    'order'  => $order->id,
+                ]);
+                return $driver;
+            }
+        }
+
+        // ── Level 2: Same governorate ─────────────────────────
+        if ($order->governorate_id) {
+            $districtIds = District::where('governorate_id', $order->governorate_id)
+    ->pluck('id');
+
+            $driver = Driver::whereIn('district_id', $districtIds)
+                ->where('status', 'available')
+                ->first();
+
+            if ($driver) {
+                Log::info("Jibli: Driver assigned from governorate [{$order->governorate_name}]", [
+                    'driver' => $driver->name,
+                    'order'  => $order->id,
+                ]);
+                return $driver;
+            }
+        }
+
+        // ── Level 3: Any available driver ─────────────────────
+        $driver = Driver::where('status', 'available')->first();
+
+        if ($driver) {
+            Log::info("Jibli: Driver assigned from global pool", [
+                'driver' => $driver->name,
+                'order'  => $order->id,
+            ]);
+            return $driver;
+        }
+
+        Log::warning("Jibli: No available driver found for order [{$order->id}]");
+        return null;
     }
 
     /**
@@ -56,8 +104,7 @@ class DriverAssignmentService
     }
 
     /**
-     * Driver rejects the offer.
-     * Tries to assign next available driver.
+     * Driver rejects — try next driver in fallback chain.
      */
     public function reject(DriverOffer $offer): ?DriverOffer
     {
@@ -66,31 +113,55 @@ class DriverAssignmentService
             'responded_at' => now(),
         ]);
 
-        // Free the driver
         $offer->driver->update(['status' => 'available']);
 
-        // Try next driver — exclude already tried drivers
-        $triedDriverIds = DriverOffer::where('order_id', $offer->order_id)
+        // Exclude all already-tried drivers
+        $triedIds = DriverOffer::where('order_id', $offer->order_id)
             ->pluck('driver_id')
             ->toArray();
 
-        $nextDriver = Driver::where('district_id', $offer->order->district_id)
-            ->where('status', 'available')
-            ->whereNotIn('id', $triedDriverIds)
-            ->first();
+        $order = $offer->order;
 
-        if (!$nextDriver) {
+        // Try district first
+        $next = null;
+
+        if ($order->district_id) {
+            $next = Driver::where('district_id', $order->district_id)
+                ->where('status', 'available')
+                ->whereNotIn('id', $triedIds)
+                ->first();
+        }
+
+        // Try governorate
+        if (!$next && $order->governorate_id) {
+            $districtIds = \App\Models\District::where('governorate_id', $order->governorate_id)
+                ->pluck('id');
+
+            $next = Driver::whereIn('district_id', $districtIds)
+                ->where('status', 'available')
+                ->whereNotIn('id', $triedIds)
+                ->first();
+        }
+
+        // Try any available
+        if (!$next) {
+            $next = Driver::where('status', 'available')
+                ->whereNotIn('id', $triedIds)
+                ->first();
+        }
+
+        if (!$next) {
             return null;
         }
 
         $newOffer = DriverOffer::create([
             'order_id'   => $offer->order_id,
-            'driver_id'  => $nextDriver->id,
+            'driver_id'  => $next->id,
             'status'     => DriverOffer::STATUS_PENDING,
             'offered_at' => now(),
         ]);
 
-        $nextDriver->update(['status' => 'busy']);
+        $next->update(['status' => 'busy']);
 
         return $newOffer;
     }

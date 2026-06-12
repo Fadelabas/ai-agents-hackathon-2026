@@ -59,9 +59,17 @@
     <h2>Jibli Driver</h2>
     <p>Sign in to your driver account</p>
 
-    @if($errors->any())
-        <div class="error">{{ $errors->first() }}</div>
-    @endif
+   @if(session('success'))
+    <div style="background:#d4edda;color:#155724;padding:10px;border-radius:8px;margin-bottom:12px;font-size:13px;">
+        ✅ {{ session('success') }}
+    </div>
+@endif
+
+@if(session('error'))
+    <div style="background:#f8d7da;color:#721c24;padding:10px;border-radius:8px;margin-bottom:12px;font-size:13px;">
+        ⚠️ {{ session('error') }}
+    </div>
+@endif
 
     <form method="POST" action="/driver/login">
         @csrf
