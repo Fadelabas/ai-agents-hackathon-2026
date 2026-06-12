@@ -17,7 +17,7 @@ The AI understands the request, extracts the required information, calculates th
 
 ## 🌐 Live Demo
 
-- Customer App: http://167.86.86.196/
+- Customer Chat: http://167.86.86.196/
 - Driver Dashboard: http://167.86.86.196/driver/login
 - Admin Dashboard: http://167.86.86.196/admin/orders
 
