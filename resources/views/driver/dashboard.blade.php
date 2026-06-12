@@ -283,17 +283,7 @@
     </div>
 </div>
 @endif
-    {{-- Idle --}}
-    @else
-    <div class="card">
-        <div class="idle-state">
-            <div class="icon">🕐</div>
-            <p>No orders yet.<br>Waiting for new requests...</p>
-        </div>
-    </div>
-    @endif
-
-</div>
+    
 
 {{-- Auto-refresh every 5 seconds --}}
 <script>
