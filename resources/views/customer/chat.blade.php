@@ -194,6 +194,7 @@ function updateStatus(data) {
     if (data.status === 'cancelled') {
         el.innerHTML = '❌ Order cancelled.';
         clearInterval(polling);
+        
         return;
     }
 }
@@ -318,7 +319,7 @@ document.getElementById('messageInput').addEventListener('keypress', function(e)
     right: 16px;
     width: 260px;
     z-index: 50;
-    display: flex;
+    display: none;
 }
 
 .status-card {
