@@ -41,9 +41,6 @@ class OrderService
  public function createOrder(array $prepared): Order
 {
     $aiData  = $prepared['ai_data'];
-    if (empty($aiData['order_description'])) {
-    throw new \Exception('Order description is required.');
-}
     $geo     = $prepared['geo'];
     $pricing = $prepared['pricing'];
     $token   = $prepared['token'] ?? \Illuminate\Support\Str::random(40);
@@ -51,7 +48,7 @@ class OrderService
     return Order::create([
         'session_token'     => $token,
         'customer_phone'    => $aiData['customer_phone'],
-        'original_message' => $aiData['order_description'] . ' | ' . $aiData['exact_address'],
+        'original_message'  => $aiData['area_text'],
         'order_description' => $aiData['order_description'] ?? null,
         'task_type'         => $aiData['task_type'],
         'area_text'         => $aiData['area_text'],
@@ -74,12 +71,9 @@ class OrderService
     public function buildConfirmationMessage(array $prepared, ?string $orderDescription = null): string
 {
     $price    = $prepared['pricing']['price'];
-    $area     = $prepared['geo']['area_name']          ?? $prepared['ai_data']['area_text'] ?? '—';
-    $address  = $prepared['ai_data']['exact_address']  ?? '—';
-    $phone    = $prepared['ai_data']['customer_phone'] ?? '—';
-    $desc     = $orderDescription
-              ?? $prepared['ai_data']['order_description']
-              ?? null;
+    $area     = $prepared['geo']['area_name'] ?? $prepared['ai_data']['area_text'] ?? 'Unknown';
+    $address  = $prepared['ai_data']['exact_address'];
+    $phone    = $prepared['ai_data']['customer_phone'];
 
     $taskMap = [
         'medicine_delivery' => '💊 Medicine Delivery',
@@ -93,13 +87,13 @@ class OrderService
 
     $taskLabel = $taskMap[$prepared['ai_data']['task_type']] ?? '📦 Delivery';
 
-    $msg  = "✅ Order Summary:\n";
-    $msg .= "• Service: {$taskLabel}\n";
+    $msg = "✅ Order Summary:\n";
 
-    if ($desc) {
-        $msg .= "• Order: {$desc}\n";
+    if ($orderDescription) {
+        $msg .= "• Order: {$orderDescription}\n";
     }
 
+    $msg .= "• Service: {$taskLabel}\n";
     $msg .= "• Area: {$area}\n";
     $msg .= "• Address: {$address}\n";
     $msg .= "• Phone: {$phone}\n";
