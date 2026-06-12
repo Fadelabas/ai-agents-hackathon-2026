@@ -210,12 +210,6 @@ class ChatController extends Controller
             $this->conversation->updateExtracted($session, ['awaiting_confirmation' => false]);
             return response()->json(['type' => 'message', 'message' => $replyMsg]);
         }
-        $existingOrder = \App\Models\Order::where('session_token', $token)->first();
-
-        if ($existingOrder) {
-            $replyMsg = "✅ Order already confirmed! We are finding a driver for you.";
-            return response()->json(['type' => 'message', 'message' => $replyMsg]);
-}
 
         try {
             $order = $this->order->createOrder([
@@ -245,7 +239,7 @@ class ChatController extends Controller
             // Link order to session
             $this->conversation->linkOrder($session, $order->id);
 
-            // Reset state
+            // Reset confirmation state
             $this->conversation->updateExtracted($session, [
                 'awaiting_confirmation' => false,
             ]);
@@ -256,23 +250,21 @@ class ChatController extends Controller
             $replyMsg = "🎉 Order confirmed! We are finding a driver for you.\n" . $driverMsg;
             $this->conversation->addMessage($session, 'model', $replyMsg);
 
-            // Return order_created so frontend shows status panel
             return response()->json([
                 'type'     => 'order_created',
                 'message'  => $replyMsg,
                 'order_id' => $order->id,
-                'token'    => $token,
+                'token'    => $order->session_token,
             ]);
 
         } catch (\Exception $e) {
             Log::error('Order creation failed', ['message' => $e->getMessage()]);
 
-            // If duplicate token — order already created, just confirm
             if (str_contains($e->getMessage(), 'Duplicate entry')) {
                 $this->conversation->updateExtracted($session, ['awaiting_confirmation' => false]);
                 return response()->json([
                     'type'    => 'order_created',
-                    'message' => '🎉 Order confirmed! We are finding a driver for you.',
+                    'message' => '🎉 Order confirmed! We are finding a driver for you. A driver has been notified.',
                     'token'   => $token,
                 ]);
             }
