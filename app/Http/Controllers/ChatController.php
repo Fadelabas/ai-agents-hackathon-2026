@@ -239,7 +239,7 @@ class ChatController extends Controller
                     'price'        => $extracted['price']        ?? 5.00,
                     'price_source' => $extracted['price_source'] ?? 'default',
                 ],
-                'token' => $token,
+                'token' => null,
             ]);
 
             // Link order to session
