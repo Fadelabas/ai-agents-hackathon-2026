@@ -15,6 +15,24 @@ The AI understands the request, extracts the required information, calculates th
 
 ---
 
+## 🌐 Live Demo
+
+- Customer App: http://167.86.86.196/
+- Driver Dashboard: http://167.86.86.196/driver/login
+- Admin Dashboard: http://167.86.86.196/admin/orders
+
+## 🔐 Demo Credentials
+
+### Driver Login
+
+- URL: http://167.86.86.196/driver/login
+- Phone: 03100004
+- Password: password123
+
+### Admin Dashboard
+
+- URL: http://167.86.86.196/admin/orders
+
 ## 🎯 Problem
 
 In Lebanon, ordering deliveries often requires multiple phone calls, unclear pricing, and manual coordination.
