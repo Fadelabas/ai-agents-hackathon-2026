@@ -63,26 +63,28 @@ class GeminiService
 {
     $text    = trim($text);
     $cleaned = preg_replace('/^```(?:json)?\s*/i', '', $text);
-    $cleaned = preg_replace('/\s*```$/',            '', $cleaned);
+    $cleaned = preg_replace('/\s*```$/', '', $cleaned);
     $cleaned = trim($cleaned);
 
-    // ── Block internal AI reasoning from reaching customer ────
+    // Block internal AI reasoning phrases
     $blockedPhrases = [
-        'previous turn', 'same chat session', 'from previous',
-        'earlier in', 'you mentioned', 'as stated', 'based on',
-        'according to', 'in context', 'in the conversation',
-        'chat history', 'already provided',
+        'previous turn',
+        'same chat session',
+        'from previous',
+        'chat history',
+        'already provided',
     ];
     foreach ($blockedPhrases as $phrase) {
-        if (stripos($cleaned, $phrase) !== false) {
-            // This is an internal AI note — never show to customer
-            return ['type' => 'question', 'message' => 'Shu badak? Kifak a3milk?'];
+        if (stripos($cleaned, $phrase) !== false && !str_starts_with($cleaned, '{')) {
+            return [
+                'type'    => 'question',
+                'message' => 'Kifak! Shu badak njeble lyom?',
+            ];
         }
     }
 
-    // ── Block raw JSON from reaching customer ─────────────────
-    // If it looks like JSON but fails validation, hide it
-    if (str_starts_with($cleaned, '{') || str_starts_with($cleaned, '[')) {
+    // Try JSON decode
+    if (str_starts_with($cleaned, '{')) {
         $decoded = json_decode($cleaned, true);
 
         if (
@@ -93,7 +95,6 @@ class GeminiService
             !empty($decoded['exact_address']) &&
             !empty($decoded['customer_phone'])
         ) {
-            // Valid complete JSON — process as order
             return [
                 'type' => 'order_data',
                 'data' => [
@@ -106,14 +107,14 @@ class GeminiService
             ];
         }
 
-        // Incomplete JSON — never show raw JSON to customer
+        // Incomplete JSON — hide from customer
         return [
             'type'    => 'question',
-            'message' => 'Shu badak? 2khbarne shu bde tjeble.',
+            'message' => 'Shu badak? 2khbarne.',
         ];
     }
 
-    // ── Normal conversational response ────────────────────────
+    // Normal response
     return [
         'type'    => 'question',
         'message' => $text,

@@ -10,6 +10,7 @@ use App\Services\GeminiService;
 use App\Services\OrderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class ChatController extends Controller
 {
@@ -30,7 +31,7 @@ class ChatController extends Controller
     /**
      * Handle incoming customer message.
      */
-    public function message(Request $request)
+   public function message(Request $request)
 {
     $request->validate([
         'message' => 'required|string|max:500',
@@ -40,6 +41,11 @@ class ChatController extends Controller
     $token   = $request->input('token');
     $message = trim($request->input('message'));
 
+    // Empty message guard
+    if (empty($message)) {
+        return response()->json(['type' => 'message', 'message' => 'Kifak, shu badak?']);
+    }
+
     // Load or create session
     $session = $this->conversation->getOrCreate($token);
 
@@ -48,37 +54,29 @@ class ChatController extends Controller
         return $this->handleConfirmation($session, $message, $token);
     }
 
-    // ── Add message to history ────────────────────────────────
-    $this->conversation->addMessage($session, 'user', $message);
-
-    // ── Inject known session data into history context ────────
-    // This prevents AI from asking again for already-known fields
+    // ── Save phone from message proactively ───────────────────
     $extracted = $session->extracted_data ?? [];
-    $history   = $session->history ?? [];
-
-    // Build enriched history with known fields reminder
-    $enrichedHistory = $history;
-    $knownFields = [];
-    if (!empty($extracted['task_type']))      $knownFields[] = "task_type: {$extracted['task_type']}";
-    if (!empty($extracted['area_text']))      $knownFields[] = "area: {$extracted['area_text']}";
-    if (!empty($extracted['exact_address']))  $knownFields[] = "address: {$extracted['exact_address']}";
-    if (!empty($extracted['customer_phone'])) $knownFields[] = "phone: {$extracted['customer_phone']}";
-
-    // Prepend system reminder about known fields
-    if (!empty($knownFields)) {
-        $reminder = "SYSTEM: Already collected from this session: " . implode(', ', $knownFields) . ". Do NOT ask for these again.";
-        array_unshift($enrichedHistory, ['role' => 'user', 'content' => $reminder]);
-        array_unshift($enrichedHistory, ['role' => 'model', 'content' => 'Understood, I will not ask for already provided information.']);
+    if (empty($extracted['customer_phone'])) {
+        $phone = $this->extractPhoneFromMessage($message);
+        if ($phone) {
+            $this->conversation->updateExtracted($session, ['customer_phone' => $phone]);
+            $extracted['customer_phone'] = $phone;
+        }
     }
 
-    // ── Call Gemini ───────────────────────────────────────────
-    $response = $this->gemini->chat($enrichedHistory);
+    // ── Add customer message to history ───────────────────────
+    $this->conversation->addMessage($session, 'user', $message);
+
+    // ── Send clean history to Gemini (no injection) ───────────
+    $session->refresh();
+    $response = $this->gemini->chat($session->history);
 
     // ── Gemini returned completed order data ──────────────────
     if ($response['type'] === 'order_data') {
-
-        // Merge with already-known session data
         $data = $response['data'];
+
+        // Fill missing fields from session memory
+        $extracted = $session->extracted_data ?? [];
         if (empty($data['customer_phone']) && !empty($extracted['customer_phone'])) {
             $data['customer_phone'] = $extracted['customer_phone'];
         }
@@ -89,16 +87,25 @@ class ChatController extends Controller
             $data['exact_address'] = $extracted['exact_address'];
         }
 
-        return $this->handleOrderData($session, $data, $token);
-    }
-
-    // ── Save extracted fields progressively ──────────────────
-    // Try to extract phone from message even if Gemini didn't return JSON
-    if (empty($extracted['customer_phone'])) {
-        $phone = $this->extractPhoneFromMessage($message);
-        if ($phone) {
-            $this->conversation->updateExtracted($session, ['customer_phone' => $phone]);
+        // Validate all 4 fields present before creating order
+        if (
+            !empty($data['task_type']) &&
+            !empty($data['area_text']) &&
+            !empty($data['exact_address']) &&
+            !empty($data['customer_phone'])
+        ) {
+            return $this->handleOrderData($session, $data, $token);
         }
+
+        // Still missing fields — ask for them
+        $missing = [];
+        if (empty($data['area_text']))      $missing[] = 'area';
+        if (empty($data['exact_address']))  $missing[] = 'exact address';
+        if (empty($data['customer_phone'])) $missing[] = 'phone number';
+
+        $askMsg = 'Please provide: ' . implode(', ', $missing);
+        $this->conversation->addMessage($session, 'model', $askMsg);
+        return response()->json(['type' => 'message', 'message' => $askMsg]);
     }
 
     // ── Gemini returned a follow-up question ──────────────────
@@ -172,52 +179,75 @@ private function extractPhoneFromMessage(string $message): ?string
 ) {
     $this->conversation->addMessage($session, 'user', $message);
 
-    // ── Customer confirmed ────────────────────────────────
+    // ── Customer confirmed ────────────────────────────────────
     if ($this->conversation->isConfirmation($message)) {
 
         $extracted = $session->extracted_data;
 
-        // Create the order
-        $order = $this->order->createOrder([
-            'ai_data' => [
-                'task_type'      => $extracted['task_type'],
-                'area_text'      => $extracted['area_text'],
-                'exact_address'  => $extracted['exact_address'],
-                'customer_phone' => $extracted['customer_phone'],
-            ],
-            'geo'     => $extracted['geo'],
-            'pricing' => [
-                'price'        => $extracted['price'],
-                'price_source' => $extracted['price_source'],
-            ],
-            'token'   => $token,
-        ]);
+        // Validate all required fields exist before creating order
+        if (
+            empty($extracted['task_type']) ||
+            empty($extracted['area_text']) ||
+            empty($extracted['exact_address']) ||
+            empty($extracted['customer_phone'])
+        ) {
+            $replyMsg = "Baad fi ma3loumat na2se. Shu badak w min wein?";
+            $this->conversation->addMessage($session, 'model', $replyMsg);
+            $this->conversation->updateExtracted($session, ['awaiting_confirmation' => false]);
+            return response()->json(['type' => 'message', 'message' => $replyMsg]);
+        }
 
-        // Link order to session
-        $this->conversation->linkOrder($session, $order->id);
+        try {
+            // Create the order
+            $order = $this->order->createOrder([
+                'ai_data' => [
+                    'task_type'         => $extracted['task_type'],
+                    'area_text'         => $extracted['area_text'],
+                    'exact_address'     => $extracted['exact_address'],
+                    'customer_phone'    => $extracted['customer_phone'],
+                    'order_description' => $extracted['order_description'] ?? null,
+                ],
+                'geo'     => $extracted['geo'] ?? ['area_id' => null, 'area_name' => $extracted['area_text'], 'district_id' => null, 'district_name' => null, 'governorate_id' => null, 'governorate_name' => null, 'resolution_method' => 'unresolved'],
+                'pricing' => [
+                    'price'        => $extracted['price'] ?? 5.00,
+                    'price_source' => $extracted['price_source'] ?? 'default',
+                ],
+                'token'   => $token,
+            ]);
 
-        // Reset awaiting confirmation
-        $this->conversation->updateExtracted($session, [
-            'awaiting_confirmation' => false,
-        ]);
+            // Link order to session
+            $this->conversation->linkOrder($session, $order->id);
 
-        // Assign driver
-        $driverMsg = $this->assignDriver($order);
+            // Reset confirmation state
+            $this->conversation->updateExtracted($session, [
+                'awaiting_confirmation' => false,
+            ]);
 
-        $replyMsg = "🎉 Order confirmed! We are finding a driver for you.\n" . $driverMsg;
-        $this->conversation->addMessage($session, 'model', $replyMsg);
+            // Assign driver
+            $driverMsg = $this->assignDriver($order);
 
-        return response()->json([
-            'type'     => 'order_created',
-            'message'  => $replyMsg,
-            'order_id' => $order->id,
-            'token'    => $token,
-        ]);
+            $replyMsg = "🎉 Order confirmed! We are finding a driver for you.\n" . $driverMsg;
+            $this->conversation->addMessage($session, 'model', $replyMsg);
+
+            return response()->json([
+                'type'     => 'order_created',
+                'message'  => $replyMsg,
+                'order_id' => $order->id,
+                'token'    => $token,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Order creation failed: ' . $e->getMessage());
+
+            $replyMsg = "⏳ Jibli is temporarily busy. Please try again in a few seconds.";
+            $this->conversation->addMessage($session, 'model', $replyMsg);
+
+            return response()->json(['type' => 'message', 'message' => $replyMsg]);
+        }
     }
 
-    // ── Customer rejected ─────────────────────────────────
+    // ── Customer rejected ─────────────────────────────────────
     if ($this->conversation->isRejection($message)) {
-
         $this->conversation->updateExtracted($session, [
             'awaiting_confirmation' => false,
             'task_type'             => null,
@@ -226,29 +256,23 @@ private function extractPhoneFromMessage(string $message): ?string
             'customer_phone'        => null,
             'price'                 => null,
             'geo'                   => null,
+            'order_description'     => null,
         ]);
 
-        // Clear history to start fresh
         $session->history = [];
         $session->save();
 
         $replyMsg = "No problem! Let's start over. What do you need?";
         $this->conversation->addMessage($session, 'model', $replyMsg);
 
-        return response()->json([
-            'type'    => 'cancelled',
-            'message' => $replyMsg,
-        ]);
+        return response()->json(['type' => 'cancelled', 'message' => $replyMsg]);
     }
 
-    // ── Unclear response ──────────────────────────────────
+    // ── Unclear response ──────────────────────────────────────
     $replyMsg = "Please reply with *yes* to confirm or *no* to cancel.";
     $this->conversation->addMessage($session, 'model', $replyMsg);
 
-    return response()->json([
-        'type'    => 'confirmation',
-        'message' => $replyMsg,
-    ]);
+    return response()->json(['type' => 'confirmation', 'message' => $replyMsg]);
 }
     /**
      * Attempt driver assignment and return status message.
