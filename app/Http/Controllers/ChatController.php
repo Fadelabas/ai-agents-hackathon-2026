@@ -151,35 +151,50 @@ class ChatController extends Controller
      * Gemini collected all 4 fields.
      * Resolve area, calculate price, show confirmation to customer.
      */
-    private function handleOrderData(
-        $session,
-        array $aiData,
-        string $token
-    ) {
-        $prepared = $this->order->prepareOrder($aiData);
+private function handleOrderData(
+    $session,
+    array $aiData,
+    string $token
+) {
+    $required = ['task_type', 'order_description', 'area_text', 'exact_address', 'customer_phone'];
 
-        // Store all extracted data in session
-        $this->conversation->updateExtracted($session, [
-            'task_type'             => $aiData['task_type'],
-            'area_text'             => $aiData['area_text'],
-            'exact_address'         => $aiData['exact_address'],
-            'customer_phone'        => $aiData['customer_phone'],
-            'order_description'     => $aiData['order_description'] ?? null,
-            'price'                 => $prepared['pricing']['price'] ?? 5.00,
-            'price_source'          => $prepared['pricing']['price_source'] ?? 'default',
-            'geo'                   => $prepared['geo'] ?? null,
-            'awaiting_confirmation' => true,
-        ]);
+    foreach ($required as $field) {
+        if (empty($aiData[$field])) {
+            $msg = match ($field) {
+                'order_description' => 'Shu exactly badak njiblek? W mn wein?',
+                'area_text' => 'La ayya mantiqa?',
+                'exact_address' => 'Wein bil ' . ($aiData['area_text'] ?? 'mantiqa') . ' bil zabt? Shi landmark aw bineye?',
+                'customer_phone' => 'Shu ra2am telephonek?',
+                default => 'Shu badak njiblek?',
+            };
 
-        // Build confirmation message
-        $confirmMsg = $this->order->buildConfirmationMessage($prepared, $aiData['order_description'] ?? null);
-        $this->conversation->addMessage($session, 'model', $confirmMsg);
-
-        return response()->json([
-            'type'    => 'confirmation',
-            'message' => $confirmMsg,
-        ]);
+            $this->conversation->addMessage($session, 'model', $msg);
+            return response()->json(['type' => 'message', 'message' => $msg]);
+        }
     }
+
+    $prepared = $this->order->prepareOrder($aiData);
+
+    $this->conversation->updateExtracted($session, [
+        'task_type' => $aiData['task_type'],
+        'order_description' => $aiData['order_description'],
+        'area_text' => $aiData['area_text'],
+        'exact_address' => $aiData['exact_address'],
+        'customer_phone' => $aiData['customer_phone'],
+        'price' => $prepared['pricing']['price'] ?? 5.00,
+        'price_source' => $prepared['pricing']['price_source'] ?? 'default',
+        'geo' => $prepared['geo'] ?? null,
+        'awaiting_confirmation' => true,
+    ]);
+
+    $confirmMsg = $this->order->buildConfirmationMessage($prepared, $aiData['order_description']);
+    $this->conversation->addMessage($session, 'model', $confirmMsg);
+
+    return response()->json([
+        'type' => 'confirmation',
+        'message' => $confirmMsg,
+    ]);
+}
 
     /**
      * Customer responded to price confirmation.
@@ -198,12 +213,13 @@ class ChatController extends Controller
 
             // Validate all required fields exist before creating order
             if (
-                empty($extracted['task_type']) ||
-                empty($extracted['area_text']) ||
-                empty($extracted['exact_address']) ||
-                empty($extracted['customer_phone'])
-            ) {
-                $replyMsg = "Baad fi ma3loumat na2se. Shu badak w min wein?";
+            empty($extracted['task_type']) ||
+            empty($extracted['order_description']) ||
+            empty($extracted['area_text']) ||
+            empty($extracted['exact_address']) ||
+            empty($extracted['customer_phone'])
+        ) {
+                $replyMsg = "Baad fi ma3loumat na2se. Shu exactly badak njiblek? W mn wein?";
                 $this->conversation->addMessage($session, 'model', $replyMsg);
                 $this->conversation->updateExtracted($session, ['awaiting_confirmation' => false]);
                 return response()->json(['type' => 'message', 'message' => $replyMsg]);

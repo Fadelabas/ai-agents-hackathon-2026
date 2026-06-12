@@ -41,6 +41,9 @@ class OrderService
  public function createOrder(array $prepared): Order
 {
     $aiData  = $prepared['ai_data'];
+    if (empty($aiData['order_description'])) {
+    throw new \Exception('Order description is required.');
+}
     $geo     = $prepared['geo'];
     $pricing = $prepared['pricing'];
     $token   = $prepared['token'] ?? \Illuminate\Support\Str::random(40);
@@ -48,7 +51,7 @@ class OrderService
     return Order::create([
         'session_token'     => $token,
         'customer_phone'    => $aiData['customer_phone'],
-        'original_message'  => $aiData['area_text'],
+        'original_message' => $aiData['order_description'] . ' | ' . $aiData['exact_address'],
         'order_description' => $aiData['order_description'] ?? null,
         'task_type'         => $aiData['task_type'],
         'area_text'         => $aiData['area_text'],

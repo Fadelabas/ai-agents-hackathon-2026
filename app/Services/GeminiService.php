@@ -53,52 +53,67 @@ class GeminiService
         }
     }
 
-    private function parseResponse(string $text): array
-    {
-        // Strip markdown fences
-        $cleaned = preg_replace('/^```(?:json)?\s*/i', '', $text);
-        $cleaned = preg_replace('/\s*```$/', '',           $cleaned);
-        $cleaned = trim($cleaned);
+   private function parseResponse(string $text): array
+{
+    $cleaned = preg_replace('/^```(?:json)?\s*/i', '', $text);
+    $cleaned = preg_replace('/\s*```$/', '', $cleaned);
+    $cleaned = trim($cleaned);
 
-        // Block internal AI notes
-        $blocked = ['previous turn','same chat session','from previous',
-                    'chat history','already provided','earlier in'];
-        foreach ($blocked as $phrase) {
-            if (stripos($cleaned, $phrase) !== false && !str_starts_with($cleaned, '{')) {
-                return ['type' => 'question', 'message' => 'Shu badak njeble lyom?'];
-            }
+    $blocked = [
+        'previous turn',
+        'same chat session',
+        'from previous',
+        'chat history',
+        'already provided',
+        'earlier in',
+        'session',
+        'internal',
+    ];
+
+    foreach ($blocked as $phrase) {
+        if (stripos($cleaned, $phrase) !== false && !str_starts_with($cleaned, '{')) {
+            return [
+                'type' => 'question',
+                'message' => 'تمام، خلينا نكمّل الطلب. شو ناقص بعد؟'
+            ];
         }
-
-        // Try JSON
-        if (str_starts_with($cleaned, '{')) {
-            $decoded = json_decode($cleaned, true);
-            if (
-                json_last_error() === JSON_ERROR_NONE &&
-                is_array($decoded) &&
-                !empty($decoded['task_type']) &&
-                !empty($decoded['area_text']) &&
-                !empty($decoded['exact_address']) &&
-                !empty($decoded['customer_phone'])
-            ) {
-                return [
-                    'type' => 'order_data',
-                    'data' => [
-                        'task_type'         => $decoded['task_type'],
-                        'area_text'         => $decoded['area_text'],
-                        'exact_address'     => $decoded['exact_address'],
-                        'customer_phone'    => $decoded['customer_phone'],
-                        'order_description' => $decoded['order_description'] ?? null,
-                        'special_notes'     => $decoded['special_notes'] ?? null,
-                    ],
-                ];
-            }
-            // Incomplete JSON — hide from customer
-            return ['type' => 'question', 'message' => 'Shu badak njeble?'];
-        }
-
-        return ['type' => 'question', 'message' => $text];
     }
 
+    if (str_starts_with($cleaned, '{')) {
+        $decoded = json_decode($cleaned, true);
+
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            return [
+                'type' => 'order_data',
+                'data' => [
+                    'task_type' => $decoded['task_type'] ?? null,
+                    'order_description' => $decoded['order_description'] ?? null,
+                    'area_text' => $decoded['area_text'] ?? null,
+                    'exact_address' => $decoded['exact_address'] ?? null,
+                    'customer_phone' => $decoded['customer_phone'] ?? null,
+                    'special_notes' => $decoded['special_notes'] ?? null,
+                ],
+            ];
+        }
+
+        return [
+            'type' => 'question',
+            'message' => 'ما قدرت رتّب الطلب. فيك توضّح شو بدك نجيبلك؟'
+        ];
+    }
+
+    if (str_contains($cleaned, 'task_type') || str_contains($cleaned, 'order_description')) {
+        return [
+            'type' => 'question',
+            'message' => 'خليني رتّب طلبك. شو بدك نجيبلك بالضبط؟'
+        ];
+    }
+
+    return [
+        'type' => 'question',
+        'message' => $cleaned
+    ];
+}
     private function formatHistory(array $history): array
     {
         return array_map(fn($m) => [
