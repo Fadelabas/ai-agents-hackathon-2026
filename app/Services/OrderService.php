@@ -43,7 +43,7 @@ class OrderService
     $aiData  = $prepared['ai_data'];
     $geo     = $prepared['geo'];
     $pricing = $prepared['pricing'];
-    $token   = $prepared['token'] ?? \Illuminate\Support\Str::random(40);
+    $token = \Illuminate\Support\Str::random(40);
 
     return Order::create([
         'session_token'     => $token,
