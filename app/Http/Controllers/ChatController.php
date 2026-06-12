@@ -32,120 +32,115 @@ class ChatController extends Controller
      * Handle incoming customer message.
      */
     public function message(Request $request)
-    {
-        $request->validate([
-            'message' => 'required|string|max:1000',
-            'token'   => 'required|string',
-        ]);
+{
+    $request->validate([
+        'message' => 'required|string|max:1000',
+        'token'   => 'required|string',
+    ]);
 
-        $token   = $request->input('token');
-        $message = trim($request->input('message'));
+    $token   = $request->input('token');
+    $message = trim($request->input('message'));
 
-        if (empty($message)) {
-            return response()->json(['type' => 'message', 'message' => 'Kifak! Shu badak?']);
+    if (empty($message)) {
+        return response()->json(['type' => 'message', 'message' => 'Shu badak?']);
+    }
+
+    $session = $this->conversation->getOrCreate($token);
+
+    // Awaiting confirmation
+    if ($this->conversation->isAwaitingConfirmation($session)) {
+        return $this->handleConfirmation($session, $message, $token);
+    }
+
+    // Save phone immediately if present in message
+    $extracted = $session->extracted_data ?? [];
+    if (empty($extracted['customer_phone'])) {
+        $phone = $this->extractPhoneFromMessage($message);
+        if ($phone) {
+            $this->conversation->updateExtracted($session, ['customer_phone' => $phone]);
         }
+    }
 
-        $session = $this->conversation->getOrCreate($token);
+    // Add to history
+    $this->conversation->addMessage($session, 'user', $message);
+    $session->refresh();
 
-        // ── Awaiting price confirmation ───────────────────────────
-        if ($this->conversation->isAwaitingConfirmation($session)) {
-            return $this->handleConfirmation($session, $message, $token);
-        }
+    // Call Gemini
+    $response = $this->gemini->chat($session->history);
 
-        // ── Save phone from message immediately ───────────────────
+    if ($response['type'] === 'order_data') {
+        $data      = $response['data'];
         $extracted = $session->extracted_data ?? [];
-        if (empty($extracted['customer_phone'])) {
-            $phone = $this->extractPhoneFromMessage($message);
-            if ($phone) {
-                $this->conversation->updateExtracted($session, ['customer_phone' => $phone]);
-                $extracted['customer_phone'] = $phone;
-            }
+
+        // Merge — never overwrite existing with null
+        $merged = [
+            'task_type'         => $data['task_type']         ?: ($extracted['task_type']         ?? null),
+            'order_description' => $data['order_description'] ?: ($extracted['order_description'] ?? null),
+            'area_text'         => $data['area_text']         ?: ($extracted['area_text']         ?? null),
+            'exact_address'     => $data['exact_address']     ?: ($extracted['exact_address']     ?? null),
+            'customer_phone'    => $data['customer_phone']    ?: ($extracted['customer_phone']    ?? null),
+            'special_notes'     => $data['special_notes']     ?: ($extracted['special_notes']     ?? null),
+        ];
+
+        // Save merged data
+        $this->conversation->updateExtracted($session, $merged);
+
+        // Check what's still missing
+        $missingMsg = $this->getMissingFieldMessage($merged);
+        if ($missingMsg) {
+            $this->conversation->addMessage($session, 'model', $missingMsg);
+            return response()->json(['type' => 'message', 'message' => $missingMsg]);
         }
 
-        // ── Add message to history ────────────────────────────────
-        $this->conversation->addMessage($session, 'user', $message);
-        $session->refresh();
-
-        // ── Call Gemini ───────────────────────────────────────────
-        $response = $this->gemini->chat($session->history);
-
-        // ── Gemini returned order data ────────────────────────────
-        if ($response['type'] === 'order_data') {
-            $data = $response['data'];
-
-            // Fill from session memory
-            $extracted = $session->extracted_data ?? [];
-            if (empty($data['customer_phone']) && !empty($extracted['customer_phone'])) {
-                $data['customer_phone'] = $extracted['customer_phone'];
-            }
-            if (empty($data['area_text']) && !empty($extracted['area_text'])) {
-                $data['area_text'] = $extracted['area_text'];
-            }
-            if (empty($data['exact_address']) && !empty($extracted['exact_address'])) {
-                $data['exact_address'] = $extracted['exact_address'];
-            }
-            if (empty($data['order_description']) && !empty($extracted['order_description'])) {
-                $data['order_description'] = $extracted['order_description'];
-            }
-
-            // Save to session
-            $this->conversation->updateExtracted($session, [
-                'task_type'         => $data['task_type'] ?? null,
-                'area_text'         => $data['area_text'] ?? null,
-                'exact_address'     => $data['exact_address'] ?? null,
-                'customer_phone'    => $data['customer_phone'] ?? null,
-                'order_description' => $data['order_description'] ?? null,
-            ]);
-
-            // All 4 required fields present?
-            if (
-                !empty($data['task_type']) &&
-                !empty($data['area_text']) &&
-                !empty($data['exact_address']) &&
-                !empty($data['customer_phone'])
-            ) {
-                return $this->handleOrderData($session, $data, $token);
-            }
-
-            // Still missing — ask for what's missing
-            $missing = [];
-            if (empty($data['area_text']))      $missing[] = 'mantiqa (area)';
-            if (empty($data['exact_address']))  $missing[] = 'el 3enwaan bil zabt';
-            if (empty($data['customer_phone'])) $missing[] = 'ra2am telephonak';
-
-            $askMsg = 'Bas badna: ' . implode(', ', $missing);
-            $this->conversation->addMessage($session, 'model', $askMsg);
-            return response()->json(['type' => 'message', 'message' => $askMsg]);
-        }
-
-        // ── Normal conversation ───────────────────────────────────
-        $this->conversation->addMessage($session, 'model', $response['message']);
-
-        return response()->json([
-            'type'    => 'message',
-            'message' => $response['message'],
-        ]);
+        // All 5 fields present — proceed to order
+        return $this->handleOrderData($session, $merged, $token);
     }
 
-    private function extractPhoneFromMessage(string $message): ?string
-    {
-        // Remove Arabic-Indic numerals
-        $arabicNums  = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
-        $westernNums = ['0','1','2','3','4','5','6','7','8','9'];
-        $msg = str_replace($arabicNums, $westernNums, $message);
+    // Normal question from Gemini
+    $this->conversation->addMessage($session, 'model', $response['message']);
 
-        // +961 format
-        if (preg_match('/\+961\s?(\d[\s\-]?\d{3}[\s\-]?\d{3,4})/', $msg, $m)) {
-            return '0' . preg_replace('/[\s\-]/', '', $m[1]);
-        }
+    return response()->json([
+        'type'    => 'message',
+        'message' => $response['message'],
+    ]);
+}
 
-        // Standard Lebanese: 03, 70, 71, 76, 78, 79, 81
-        if (preg_match('/\b(03|70|71|76|78|79|81)[\s\-]?\d{3}[\s\-]?\d{3,4}\b/', $msg, $m)) {
-            return preg_replace('/[\s\-]/', '', $m[0]);
-        }
+private function getMissingFieldMessage(array $data): ?string
+{
+    $area = $data['area_text'] ?? null;
 
-        return null;
+    if (empty($data['order_description'])) {
+        return 'Shu exactly badak njiblek? W mn wein?';
     }
+    if (empty($data['area_text'])) {
+        return 'La ayya mantiqa?';
+    }
+    if (empty($data['exact_address'])) {
+        return "Wein bil {$area} bil zabt? Shi landmark aw bineye?";
+    }
+    if (empty($data['customer_phone'])) {
+        return 'Shu ra2am telephonek?';
+    }
+
+    return null;
+}
+
+private function extractPhoneFromMessage(string $message): ?string
+{
+    $arabicNums  = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+    $westernNums = ['0','1','2','3','4','5','6','7','8','9'];
+    $msg = str_replace($arabicNums, $westernNums, $message);
+
+    if (preg_match('/\+961\s?(\d[\s\-]?\d{3}[\s\-]?\d{3,4})/', $msg, $m)) {
+        return '0' . preg_replace('/[\s\-]/', '', $m[1]);
+    }
+    if (preg_match('/\b(03|70|71|76|78|79|81)[\s\-]?\d{3}[\s\-]?\d{3,4}\b/', $msg, $m)) {
+        return preg_replace('/[\s\-]/', '', $m[0]);
+    }
+
+    return null;
+}
+
 
     /**
      * Gemini collected all 4 fields.

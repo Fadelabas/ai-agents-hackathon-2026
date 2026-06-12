@@ -74,9 +74,12 @@ class OrderService
     public function buildConfirmationMessage(array $prepared, ?string $orderDescription = null): string
 {
     $price    = $prepared['pricing']['price'];
-    $area     = $prepared['geo']['area_name'] ?? $prepared['ai_data']['area_text'] ?? 'Unknown';
-    $address  = $prepared['ai_data']['exact_address'];
-    $phone    = $prepared['ai_data']['customer_phone'];
+    $area     = $prepared['geo']['area_name']          ?? $prepared['ai_data']['area_text'] ?? '—';
+    $address  = $prepared['ai_data']['exact_address']  ?? '—';
+    $phone    = $prepared['ai_data']['customer_phone'] ?? '—';
+    $desc     = $orderDescription
+              ?? $prepared['ai_data']['order_description']
+              ?? null;
 
     $taskMap = [
         'medicine_delivery' => '💊 Medicine Delivery',
@@ -90,13 +93,13 @@ class OrderService
 
     $taskLabel = $taskMap[$prepared['ai_data']['task_type']] ?? '📦 Delivery';
 
-    $msg = "✅ Order Summary:\n";
+    $msg  = "✅ Order Summary:\n";
+    $msg .= "• Service: {$taskLabel}\n";
 
-    if ($orderDescription) {
-        $msg .= "• Order: {$orderDescription}\n";
+    if ($desc) {
+        $msg .= "• Order: {$desc}\n";
     }
 
-    $msg .= "• Service: {$taskLabel}\n";
     $msg .= "• Area: {$area}\n";
     $msg .= "• Address: {$address}\n";
     $msg .= "• Phone: {$phone}\n";

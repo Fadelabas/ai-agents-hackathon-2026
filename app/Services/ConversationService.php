@@ -35,22 +35,21 @@ class ConversationService
         $session->save();
     }
 
-    public function updateExtracted(ConversationSession $session, array $data): void
-    {
-        $existing = $session->extracted_data ?? [];
+  public function updateExtracted(ConversationSession $session, array $data): void
+{
+    $existing = $session->extracted_data ?? [];
 
-        foreach ($data as $key => $value) {
-            if ($value === null || $value === '') {
-                continue;
-            }
-
-            $existing[$key] = $value;
+    foreach ($data as $key => $value) {
+        // Never overwrite existing value with null or empty string
+        if ($value === null || $value === '') {
+            continue;
         }
-
-        $session->extracted_data = $existing;
-        $session->save();
+        $existing[$key] = $value;
     }
 
+    $session->extracted_data = $existing;
+    $session->save();
+}
     public function clearAwaitingConfirmation(ConversationSession $session): void
     {
         $data = $session->extracted_data ?? [];
