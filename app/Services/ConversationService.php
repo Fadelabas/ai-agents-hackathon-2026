@@ -20,6 +20,7 @@ class ConversationService
                     'area_text'      => null,
                     'exact_address'  => null,
                     'customer_phone' => null,
+                    'order_description'     => null,
                     'price'          => null,
                     'price_source'   => null,
                     'awaiting_confirmation' => false,
@@ -60,59 +61,62 @@ class ConversationService
     /**
      * Check if customer confirmed (yes in any language).
      */
-    public function isConfirmation(string $message): bool
+public function isConfirmation(string $message): bool
 {
-    $msg = $this->normalizeInput($message);
+    $msg = $this->normalize($message);
 
-    $positives = [
-        // English
-        'yes', 'y', 'yep', 'yeah', 'yup', 'ok', 'okay', 'ok!', 'okay!',
-        'confirm', 'confirmed', 'approve', 'approved', 'accept', 'accepted',
-        'sure', 'sure!', 'go', 'go ahead', 'proceed', 'do it', 'send it',
-        'correct', 'right', 'perfect', 'great', 'good', 'sounds good',
-        'yes please', 'yes!', 'ok go', 'ok confirm', 'yes confirm',
-        'let\'s go', 'lets go', 'continue', 'done', 'finish', 'submit',
-
-        // Franco-Arabic
-        'aywa', 'aywa!', 'aywe', 'eh', 'eeh', 'eeeh', 'e', 'ah',
-        'na3am', 'na3m', 'tamam', 'tamamm', 'tamem',
-        'mwefe2', 'mwafek', 'mwafiq', 'mazbout', 'sah', 'sa7',
-        'yalla', 'yalla!', 'yalla go', 'tf', 'tff', 'tfff',
-        'kaml', 'kamle', 'kammil', 'mni7', 'mnih',
-        '3anjad', 'okay 3anjad', 'ok 3anjad',
-        'bas kammil', 'yii ok', 'hay ok',
-
-        // Arabic
-        'نعم', 'أيوا', 'اي', 'إيه', 'آه', 'تمام', 'موافق',
-        'اوكي', 'أكد', 'صح', 'صحيح', 'تمام تمام',
-        'موافق نعم', 'نعم موافق', 'اوك', 'اوكي',
-        'امضي', 'كمل', 'كملي', 'أكمل', 'ارسل',
-        'اه نعم', 'اي نعم', 'طيب', 'طب',
-
-        // French
-        'oui', 'oui!', 'bien sur', 'bien sûr', 'd accord',
-        'd\'accord', 'confirme', 'confirmé', 'ok oui',
+    // FIRST: check for negation words — these override confirmation
+    $negations = [
+        'ma ', ' ma ', 'mesh', 'mish', 'la2', ' la ', 'laa',
+        'no ', ' no', 'cancel', 'not yet', 'ma talbt', 'ma bade',
+        'ma badde', 'b3d', 'ba3d', 'بعد', 'ما ', ' ما', 'مش',
+        'لا', 'لأ', 'مش موافق', 'ما بدي', 'ما طلبت', 'الغ',
     ];
 
-    foreach ($positives as $word) {
-        if ($msg === $word || str_starts_with($msg, $word . ' ') || str_ends_with($msg, ' ' . $word) || str_contains($msg, ' ' . $word . ' ')) {
-            return true;
-        }
-        if ($msg === $word) {
-            return true;
+    foreach ($negations as $neg) {
+        if (str_contains($msg, trim($neg))) {
+            return false;
         }
     }
 
-    // Partial match for short inputs
-    foreach (['yes', 'ok', 'aywa', 'tamam', 'nعم', 'confirm', 'eh', 'na3am', 'mwefe2', 'موافق', 'نعم', 'تمام', 'اوك'] as $key) {
-        if (str_contains($msg, $key)) {
+    // THEN: check for confirmation words
+    $positives = [
+        'yes', 'yep', 'yeah', 'yup', 'ok', 'okay',
+        'sure', 'confirm', 'confirmed', 'approve', 'approved',
+        'accept', 'accepted', 'correct', 'right', 'perfect',
+        'go', 'proceed', 'do it', 'send it', 'continue',
+        'aywa', 'aywe', 'eh', 'eeh', 'ah', 'aah',
+        'na3am', 'na3m', 'tamam', 'tmam', 'tamem',
+        'mwefe2', 'mwafek', 'mazbout', 'sah',
+        'yalla', 'tf', 'kaml', 'kamle', 'akid', 'akeed',
+        'نعم', 'أيوا', 'تمام', 'موافق', 'أكيد', 'اوكي',
+        'صح', 'طيب', 'اوك', 'كمل',
+        'oui', 'bien sur', 'd accord',
+    ];
+
+    foreach ($positives as $word) {
+        if ($msg === $word || str_contains($msg, $word)) {
             return true;
         }
     }
 
     return false;
 }
+private function normalize(string $message): string
+{
+    // Convert Arabic-Indic numerals to Western
+    $arabicNums  = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+    $westernNums = ['0','1','2','3','4','5','6','7','8','9'];
+    $msg = str_replace($arabicNums, $westernNums, $message);
 
+    // Lowercase and trim
+    $msg = strtolower(trim($msg));
+
+    // Remove extra spaces
+    $msg = preg_replace('/\s+/', ' ', $msg);
+
+    return $msg;
+}
 public function isRejection(string $message): bool
 {
     $msg = $this->normalizeInput($message);

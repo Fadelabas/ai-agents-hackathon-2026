@@ -228,6 +228,9 @@
                         <span class="task-badge">
                             {{ str_replace('_', ' ', $order->task_type) }}
                         </span>
+                        @if($order->order_description)
+                            <br><small style="color:#888;font-size:11px;">{{ $order->order_description }}</small>
+                        @endif
                     </td>
                     <td>
                         {{ $order->area_name ?? $order->area_text }}

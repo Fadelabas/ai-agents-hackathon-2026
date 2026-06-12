@@ -87,6 +87,7 @@ class DriverAssignmentService
         return null;
     }
 
+    
     /**
      * Driver accepts the offer.
      */

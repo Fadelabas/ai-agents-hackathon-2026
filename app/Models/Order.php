@@ -14,6 +14,7 @@ class Order extends Model
         'customer_phone',
         'original_message',
         'normalized_request',
+        'order_description',
         'task_type',
         'area_text',
         'area_id',

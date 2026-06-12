@@ -71,37 +71,39 @@ class ChatController extends Controller
      * Gemini collected all 4 fields.
      * Resolve area, calculate price, show confirmation to customer.
      */
-    private function handleOrderData(
-        $session,
-        array $aiData,
-        string $token
-    ) {
-        // Prepare order (resolve geo + calculate price)
-        $prepared = $this->order->prepareOrder($aiData);
+   private function handleOrderData(
+    $session,
+    array $aiData,
+    string $token
+) {
+    $geo     = $this->order->prepareOrder($aiData)['geo'] ?? [];
+    $pricing = $this->order->prepareOrder($aiData)['pricing'] ?? [];
 
-        // Store prepared data in session
-        $this->conversation->updateExtracted($session, [
-            'task_type'             => $aiData['task_type'],
-            'area_text'             => $aiData['area_text'],
-            'exact_address'         => $aiData['exact_address'],
-            'customer_phone'        => $aiData['customer_phone'],
-            'price'                 => $prepared['pricing']['price'],
-            'price_source'          => $prepared['pricing']['price_source'],
-            'geo'                   => $prepared['geo'],
-            'awaiting_confirmation' => true,
-        ]);
+    // Prepare full order data
+    $prepared = $this->order->prepareOrder($aiData);
 
-        // Build and show price confirmation message
-        $confirmMsg = $this->order->buildConfirmationMessage($prepared);
+    // Store all extracted data in session
+    $this->conversation->updateExtracted($session, [
+        'task_type'             => $aiData['task_type'],
+        'area_text'             => $aiData['area_text'],
+        'exact_address'         => $aiData['exact_address'],
+        'customer_phone'        => $aiData['customer_phone'],
+        'order_description'     => $aiData['order_description'] ?? null,
+        'price'                 => $prepared['pricing']['price'],
+        'price_source'          => $prepared['pricing']['price_source'],
+        'geo'                   => $prepared['geo'],
+        'awaiting_confirmation' => true,
+    ]);
 
-        $this->conversation->addMessage($session, 'model', $confirmMsg);
+    // Build confirmation message
+    $confirmMsg = $this->order->buildConfirmationMessage($prepared, $aiData['order_description'] ?? null);
+    $this->conversation->addMessage($session, 'model', $confirmMsg);
 
-        return response()->json([
-            'type'    => 'confirmation',
-            'message' => $confirmMsg,
-        ]);
-    }
-
+    return response()->json([
+        'type'    => 'confirmation',
+        'message' => $confirmMsg,
+    ]);
+}
     /**
      * Customer responded to price confirmation.
      */

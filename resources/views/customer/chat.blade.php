@@ -142,22 +142,24 @@ function startPolling(token) {
 function updateStatus(data) {
     const el = document.getElementById('statusContent');
 
+    const desc = data.order_description
+        ? `<br><small style="color:#888;">📦 ${data.order_description}</small>`
+        : '';
+
     if (data.status === 'pending') {
-        el.innerHTML = '🔍 Finding a driver for you...';
-    } else if (data.status === 'driver_assigned') {
+        el.innerHTML = `🔍 Finding a driver for you...${desc}`;
+    } else if (data.status === 'driver_assigned' || data.status === 'in_progress') {
         el.innerHTML = `
-            ✅ <strong>Driver Assigned!</strong><br><br>
+            ✅ <strong>Driver Assigned!</strong>${desc}<br><br>
             👤 <strong>${data.driver_name}</strong><br>
             📞 <a href="tel:${data.driver_phone}">${data.driver_phone}</a><br>
             💰 Delivery Fee: <strong>$${data.price}</strong>
         `;
-    } else if (data.status === 'in_progress') {
-        el.innerHTML = '🚗 Your order is on the way...';
     } else if (data.status === 'completed') {
-        el.innerHTML = '✅ <strong>Delivered!</strong> Thank you for using Jibli 🎉';
+        el.innerHTML = `✅ <strong>Delivered!</strong> Thank you for using Jibli 🎉${desc}`;
+        clearInterval(polling);
     }
 }
-
 // Send on Enter key
 document.getElementById('messageInput').addEventListener('keypress', function(e) {
     if (e.key === 'Enter') sendMessage();

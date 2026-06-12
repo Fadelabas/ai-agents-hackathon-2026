@@ -59,16 +59,31 @@ class GeminiService
      * Parse Gemini response.
      * Returns type=question or type=order_data.
      */
-   private function parseResponse(string $text): array
+  private function parseResponse(string $text): array
 {
     $text = trim($text);
 
-    // Strip markdown code fences if present
+    // Strip markdown code fences
     $cleaned = preg_replace('/^```(?:json)?\s*/i', '', $text);
     $cleaned = preg_replace('/\s*```$/', '', $cleaned);
     $cleaned = trim($cleaned);
 
-    // Try to decode as JSON
+    // Detect internal AI reasoning — never show to customer
+    $internalPhrases = [
+        'previous turn', 'same chat session', 'from previous',
+        'session', 'earlier in', 'you mentioned', 'as stated',
+        'based on', 'according to', 'in context'
+    ];
+    foreach ($internalPhrases as $phrase) {
+        if (stripos($cleaned, $phrase) !== false && json_decode($cleaned) === null) {
+            return [
+                'type'    => 'question',
+                'message' => 'Kifak! Shu badak?',
+            ];
+        }
+    }
+
+    // Try JSON decode
     $decoded = json_decode($cleaned, true);
 
     if (
@@ -82,15 +97,15 @@ class GeminiService
         return [
             'type' => 'order_data',
             'data' => [
-                'task_type'      => $decoded['task_type'],
-                'area_text'      => $decoded['area_text'],
-                'exact_address'  => $decoded['exact_address'],
-                'customer_phone' => $decoded['customer_phone'],
+                'task_type'         => $decoded['task_type'],
+                'area_text'         => $decoded['area_text'],
+                'exact_address'     => $decoded['exact_address'],
+                'customer_phone'    => $decoded['customer_phone'],
+                'order_description' => $decoded['order_description'] ?? null,
             ],
         ];
     }
 
-    // Otherwise treat as conversational message
     return [
         'type'    => 'question',
         'message' => $text,
@@ -659,14 +674,42 @@ CONVERSATION RULES
 - Never ask for confirmation before returning JSON
 
 ═══════════════════════════════════════════════════════
+═══════════════════════════════════════════════════════
 JSON OUTPUT — STRICT FORMAT
 ═══════════════════════════════════════════════════════
 {
-  "task_type": "medicine_delivery",
-  "area_text": "hazmieh",
-  "exact_address": "3and el madrase",
-  "customer_phone": "03123456"
+  "task_type": "food_delivery",
+  "area_text": "choueifat",
+  "exact_address": "Choueifat - bwej sadaka",
+  "customer_phone": "03123456",
+  "order_description": "box family shawarma"
 }
+
+IMPORTANT ADDRESS RULE:
+Always format exact_address as: "Area - specific location"
+Example: "Choueifat - bwej sadaka" not just "bwej sadaka"
+
+IMPORTANT ORDER DESCRIPTION RULE:
+Extract the actual item or service requested.
+Examples:
+- "box family shawarma" → order_description: "box family shawarma"
+- "panadol w brufen" → order_description: "panadol w brufen"
+- "laptop charger" → order_description: "laptop charger"
+- "groceries from spinneys" → order_description: "groceries from spinneys"
+If no specific item mentioned, use the task type as description.
+
+CONFIRMATION RULES — VERY IMPORTANT:
+Only confirm when customer CLEARLY says yes with NO negation words.
+VALID confirmations: yes, ok, okay, aywa, na3am, tamam, mwefe2, موافق, نعم, تمام, أكيد, confirm
+INVALID — do NOT confirm if message contains: ma, mesh, mish, la2, no, cancel, ma talabt, ma bade, not yet, بعد, ما, مش, لا
+
+Examples:
+"eh" alone → CONFIRM
+"aywa" → CONFIRM
+"yes please" → CONFIRM
+"eh bs ana ma talbt b3d" → DO NOT CONFIRM → reply "No problem, what would you like to order?"
+"la2 ma bade" → DO NOT CONFIRM → reply "No problem, let me know when you're ready."
+"mesh sure" → DO NOT CONFIRM → ask "Do you want to confirm the order?"
 
 RULES:
 - No text before or after JSON

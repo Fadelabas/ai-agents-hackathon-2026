@@ -49,6 +49,7 @@ class OrderService
         'session_token'     => $token,
         'customer_phone'    => $aiData['customer_phone'],
         'original_message'  => $aiData['area_text'],
+        'order_description' => $aiData['order_description'] ?? null,
         'task_type'         => $aiData['task_type'],
         'area_text'         => $aiData['area_text'],
         'area_id'           => $geo['area_id'],
@@ -67,29 +68,38 @@ class OrderService
     /**
      * Build the price confirmation message shown to customer.
      */
-    public function buildConfirmationMessage(array $prepared): string
-    {
-        $price    = $prepared['pricing']['price'];
-        $area     = $prepared['geo']['area_name']
-                    ?? $prepared['ai_data']['area_text'];
-        $taskMap  = [
-            'medicine_delivery' => '💊 Medicine Delivery',
-            'food_delivery'     => '🍔 Food Delivery',
-            'grocery_delivery'  => '🛒 Grocery Delivery',
-            'document_delivery' => '📄 Document Delivery',
-            'shop_delivery'     => '🛍️ Shop Delivery',
-            'taxi_request'      => '🚖 Taxi Request',
-            'other'             => '📦 Delivery',
-        ];
+    public function buildConfirmationMessage(array $prepared, ?string $orderDescription = null): string
+{
+    $price    = $prepared['pricing']['price'];
+    $area     = $prepared['geo']['area_name'] ?? $prepared['ai_data']['area_text'] ?? 'Unknown';
+    $address  = $prepared['ai_data']['exact_address'];
+    $phone    = $prepared['ai_data']['customer_phone'];
 
-        $taskLabel = $taskMap[$prepared['ai_data']['task_type']] ?? '📦 Delivery';
-        $address   = $prepared['ai_data']['exact_address'];
+    $taskMap = [
+        'medicine_delivery' => '💊 Medicine Delivery',
+        'food_delivery'     => '🍔 Food Delivery',
+        'grocery_delivery'  => '🛒 Grocery Delivery',
+        'document_delivery' => '📄 Document Delivery',
+        'shop_delivery'     => '🛍️ Shop Delivery',
+        'taxi_request'      => '🚖 Taxi Request',
+        'other'             => '📦 Delivery',
+    ];
 
-        return "✅ Order Summary:\n"
-            . "• Service: {$taskLabel}\n"
-            . "• Area: {$area}\n"
-            . "• Address: {$address}\n"
-            . "• Delivery Fee: \${$price}\n\n"
-            . "Reply *yes* to confirm or *no* to cancel.";
+    $taskLabel = $taskMap[$prepared['ai_data']['task_type']] ?? '📦 Delivery';
+
+    $msg = "✅ Order Summary:\n";
+
+    if ($orderDescription) {
+        $msg .= "• Order: {$orderDescription}\n";
     }
+
+    $msg .= "• Service: {$taskLabel}\n";
+    $msg .= "• Area: {$area}\n";
+    $msg .= "• Address: {$address}\n";
+    $msg .= "• Phone: {$phone}\n";
+    $msg .= "• Delivery Fee: \${$price}\n\n";
+    $msg .= "Reply *yes* to confirm or *no* to cancel.";
+
+    return $msg;
+}
 }

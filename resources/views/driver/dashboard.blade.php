@@ -166,91 +166,123 @@
     </div>
 
     {{-- Active Order --}}
-    @if($activeOffer)
-    <div class="card">
-        <div class="card-title">🟢 Active Order</div>
+@if($activeOffer)
+<div class="card">
+    <div class="card-title">🟢 Active Order</div>
 
-        <div class="task-badge">
-            {{ str_replace('_', ' ', ucfirst($activeOffer->order->task_type)) }}
-        </div>
+    <div class="task-badge">
+        {{ str_replace('_', ' ', ucfirst($activeOffer->order->task_type)) }}
+    </div>
 
-        <div class="order-row">
-            <span class="label">Area</span>
-            <span class="value">{{ $activeOffer->order->area_name ?? $activeOffer->order->area_text }}</span>
-        </div>
-        <div class="order-row">
-            <span class="label">Address</span>
-            <span class="value">{{ $activeOffer->order->exact_address }}</span>
-        </div>
-        <div class="order-row">
-            <span class="label">Customer</span>
-            <span class="value">
-                <a href="tel:{{ $activeOffer->order->customer_phone }}" style="color:#6c63ff;">
-                    {{ $activeOffer->order->customer_phone }}
-                </a>
-            </span>
-        </div>
-        <div class="order-row">
-            <span class="label">District</span>
-            <span class="value">{{ $activeOffer->order->district_name }}</span>
-        </div>
+    @if($activeOffer->order->order_description)
+    <div class="order-row">
+        <span class="label">Item</span>
+        <span class="value" style="color:#6c63ff;font-weight:600;">
+            {{ $activeOffer->order->order_description }}
+        </span>
+    </div>
+    @endif
 
-        <div class="price-badge">💰 ${{ number_format($activeOffer->order->price, 2) }}</div>
+    <div class="order-row">
+        <span class="label">Area</span>
+        <span class="value">{{ $activeOffer->order->area_name ?? $activeOffer->order->area_text }}</span>
+    </div>
+    <div class="order-row">
+        <span class="label">Address</span>
+        <span class="value">{{ $activeOffer->order->exact_address }}</span>
+    </div>
+    <div class="order-row">
+        <span class="label">Customer</span>
+        <span class="value">
+            <a href="tel:{{ $activeOffer->order->customer_phone }}" style="color:#6c63ff;">
+                {{ $activeOffer->order->customer_phone }}
+            </a>
+        </span>
+    </div>
+    <div class="order-row">
+        <span class="label">District</span>
+        <span class="value">{{ $activeOffer->order->district_name }}</span>
+    </div>
 
-        <form method="POST" action="/driver/order/{{ $activeOffer->order->id }}/complete">
+    <div class="price-badge">💰 ${{ number_format($activeOffer->order->price, 2) }}</div>
+
+    <form method="POST" action="/driver/order/{{ $activeOffer->order->id }}/complete">
+        @csrf
+        <button type="submit" class="btn btn-complete"
+                onclick="this.disabled=true;this.form.submit();">
+            ✅ Mark as Completed
+        </button>
+    </form>
+</div>
+
+{{-- Pending Offer --}}
+@elseif($pendingOffer)
+<div class="card">
+    <div class="card-title">🔔 New Order Request</div>
+
+    <div class="task-badge">
+        {{ str_replace('_', ' ', ucfirst($pendingOffer->order->task_type)) }}
+    </div>
+
+    @if($pendingOffer->order->order_description)
+    <div class="order-row">
+        <span class="label">Item</span>
+        <span class="value" style="color:#6c63ff;font-weight:600;">
+            {{ $pendingOffer->order->order_description }}
+        </span>
+    </div>
+    @endif
+
+    <div class="order-row">
+        <span class="label">Area</span>
+        <span class="value">{{ $pendingOffer->order->area_name ?? $pendingOffer->order->area_text }}</span>
+    </div>
+    <div class="order-row">
+        <span class="label">Address</span>
+        <span class="value">{{ $pendingOffer->order->exact_address }}</span>
+    </div>
+    <div class="order-row">
+        <span class="label">Customer Phone</span>
+        <span class="value">
+            <a href="tel:{{ $pendingOffer->order->customer_phone }}" style="color:#6c63ff;">
+                {{ $pendingOffer->order->customer_phone }}
+            </a>
+        </span>
+    </div>
+    <div class="order-row">
+        <span class="label">District</span>
+        <span class="value">{{ $pendingOffer->order->district_name }}</span>
+    </div>
+
+    <div class="price-badge">💰 ${{ number_format($pendingOffer->order->price, 2) }}</div>
+
+    <div class="btn-group">
+        <form method="POST" action="/driver/offer/{{ $pendingOffer->id }}/accept" style="flex:1">
             @csrf
-            <button type="submit" class="btn btn-complete" onclick="this.disabled=true;this.form.submit();">
-                ✅ Mark as Completed
+            <button type="submit" class="btn btn-accept"
+                    onclick="this.disabled=true;this.form.submit();" style="width:100%">
+                ✅ Accept
+            </button>
+        </form>
+        <form method="POST" action="/driver/offer/{{ $pendingOffer->id }}/reject" style="flex:1">
+            @csrf
+            <button type="submit" class="btn btn-reject"
+                    onclick="this.disabled=true;this.form.submit();" style="width:100%">
+                ❌ Reject
             </button>
         </form>
     </div>
+</div>
 
-    {{-- Pending Offer --}}
-    @elseif($pendingOffer)
-    <div class="card">
-        <div class="card-title">🔔 New Order Request</div>
-
-        <div class="task-badge">
-            {{ str_replace('_', ' ', ucfirst($pendingOffer->order->task_type)) }}
-        </div>
-
-        <div class="order-row">
-            <span class="label">Area</span>
-            <span class="value">{{ $pendingOffer->order->area_name ?? $pendingOffer->order->area_text }}</span>
-        </div>
-        <div class="order-row">
-            <span class="label">Address</span>
-            <span class="value">{{ $pendingOffer->order->exact_address }}</span>
-        </div>
-        <div class="order-row">
-            <span class="label">Customer Phone</span>
-            <span class="value">{{ $pendingOffer->order->customer_phone }}</span>
-        </div>
-        <div class="order-row">
-            <span class="label">District</span>
-            <span class="value">{{ $pendingOffer->order->district_name }}</span>
-        </div>
-
-        <div class="price-badge">💰 ${{ number_format($pendingOffer->order->price, 2) }}</div>
-
-        <div class="btn-group">
-            <form method="POST" action="/driver/offer/{{ $pendingOffer->id }}/accept" style="flex:1">
-                @csrf
-                <button type="submit" class="btn btn-accept"
-                        onclick="this.disabled=true;this.form.submit();" style="width:100%">
-                    ✅ Accept
-                </button>
-            </form>
-            <form method="POST" action="/driver/offer/{{ $pendingOffer->id }}/reject" style="flex:1">
-                @csrf
-                <button type="submit" class="btn btn-reject"
-                        onclick="this.disabled=true;this.form.submit();" style="width:100%">
-                    ❌ Reject
-                </button>
-            </form>
-        </div>
+{{-- Idle --}}
+@else
+<div class="card">
+    <div class="idle-state">
+        <div class="icon">🕐</div>
+        <p>No orders yet.<br>Waiting for new requests...</p>
     </div>
-
+</div>
+@endif
     {{-- Idle --}}
     @else
     <div class="card">

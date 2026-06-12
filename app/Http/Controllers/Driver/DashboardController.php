@@ -18,21 +18,25 @@ class DashboardController extends Controller
 {
     $driver = Driver::find(session('driver_id'));
 
-    // Driver no longer exists (e.g. after reseeding)
     if (!$driver) {
         session()->forget('driver_id');
         return redirect()->route('driver.login')
             ->with('error', 'Session expired. Please log in again.');
     }
 
+    // Only pending offers
     $pendingOffer = DriverOffer::where('driver_id', $driver->id)
         ->where('status', 'pending')
         ->with('order')
         ->latest()
         ->first();
 
+    // Only active accepted orders (not completed)
     $activeOffer = DriverOffer::where('driver_id', $driver->id)
         ->where('status', 'accepted')
+        ->whereHas('order', function ($q) {
+            $q->whereIn('status', ['driver_assigned', 'in_progress']);
+        })
         ->with('order')
         ->latest()
         ->first();
@@ -61,15 +65,17 @@ class DashboardController extends Controller
         return redirect()->route('driver.dashboard');
     }
 
-    public function complete(Order $order)
-    {
-        $offer = DriverOffer::where('order_id', $order->id)
-            ->where('driver_id', session('driver_id'))
-            ->where('status', 'accepted')
-            ->firstOrFail();
+  public function complete(Order $order)
+{
+    $offer = DriverOffer::where('order_id', $order->id)
+        ->where('driver_id', session('driver_id'))
+        ->where('status', 'accepted')
+        ->firstOrFail();
 
-        $this->assignment->complete($offer);
+    // Complete the order
+    $this->assignment->complete($offer);
 
-        return redirect()->route('driver.dashboard');
-    }
+    return redirect()->route('driver.dashboard')
+        ->with('success', 'Order marked as completed.');
+}
 }
