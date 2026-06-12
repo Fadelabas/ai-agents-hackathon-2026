@@ -31,42 +31,100 @@ class ChatController extends Controller
      * Handle incoming customer message.
      */
     public function message(Request $request)
-    {
-        $request->validate([
-            'message' => 'required|string|max:500',
-            'token'   => 'required|string',
-        ]);
+{
+    $request->validate([
+        'message' => 'required|string|max:500',
+        'token'   => 'required|string',
+    ]);
 
-        $token   = $request->input('token');
-        $message = trim($request->input('message'));
+    $token   = $request->input('token');
+    $message = trim($request->input('message'));
 
-        // Load or create conversation session
-        $session = $this->conversation->getOrCreate($token);
+    // Load or create session
+    $session = $this->conversation->getOrCreate($token);
 
-        // ── State: Waiting for price confirmation ─────────────
-        if ($this->conversation->isAwaitingConfirmation($session)) {
-            return $this->handleConfirmation($session, $message, $token);
-        }
-
-        // ── State: Normal conversation with Gemini ────────────
-        $this->conversation->addMessage($session, 'user', $message);
-
-        $response = $this->gemini->chat($session->history);
-
-        // ── Gemini returned completed order data ──────────────
-        if ($response['type'] === 'order_data') {
-            return $this->handleOrderData($session, $response['data'], $token);
-        }
-
-        // ── Gemini returned a follow-up question ──────────────
-        $this->conversation->addMessage($session, 'model', $response['message']);
-
-        return response()->json([
-            'type'    => 'message',
-            'message' => $response['message'],
-        ]);
+    // ── State: Waiting for price confirmation ─────────────────
+    if ($this->conversation->isAwaitingConfirmation($session)) {
+        return $this->handleConfirmation($session, $message, $token);
     }
 
+    // ── Add message to history ────────────────────────────────
+    $this->conversation->addMessage($session, 'user', $message);
+
+    // ── Inject known session data into history context ────────
+    // This prevents AI from asking again for already-known fields
+    $extracted = $session->extracted_data ?? [];
+    $history   = $session->history ?? [];
+
+    // Build enriched history with known fields reminder
+    $enrichedHistory = $history;
+    $knownFields = [];
+    if (!empty($extracted['task_type']))      $knownFields[] = "task_type: {$extracted['task_type']}";
+    if (!empty($extracted['area_text']))      $knownFields[] = "area: {$extracted['area_text']}";
+    if (!empty($extracted['exact_address']))  $knownFields[] = "address: {$extracted['exact_address']}";
+    if (!empty($extracted['customer_phone'])) $knownFields[] = "phone: {$extracted['customer_phone']}";
+
+    // Prepend system reminder about known fields
+    if (!empty($knownFields)) {
+        $reminder = "SYSTEM: Already collected from this session: " . implode(', ', $knownFields) . ". Do NOT ask for these again.";
+        array_unshift($enrichedHistory, ['role' => 'user', 'content' => $reminder]);
+        array_unshift($enrichedHistory, ['role' => 'model', 'content' => 'Understood, I will not ask for already provided information.']);
+    }
+
+    // ── Call Gemini ───────────────────────────────────────────
+    $response = $this->gemini->chat($enrichedHistory);
+
+    // ── Gemini returned completed order data ──────────────────
+    if ($response['type'] === 'order_data') {
+
+        // Merge with already-known session data
+        $data = $response['data'];
+        if (empty($data['customer_phone']) && !empty($extracted['customer_phone'])) {
+            $data['customer_phone'] = $extracted['customer_phone'];
+        }
+        if (empty($data['area_text']) && !empty($extracted['area_text'])) {
+            $data['area_text'] = $extracted['area_text'];
+        }
+        if (empty($data['exact_address']) && !empty($extracted['exact_address'])) {
+            $data['exact_address'] = $extracted['exact_address'];
+        }
+
+        return $this->handleOrderData($session, $data, $token);
+    }
+
+    // ── Save extracted fields progressively ──────────────────
+    // Try to extract phone from message even if Gemini didn't return JSON
+    if (empty($extracted['customer_phone'])) {
+        $phone = $this->extractPhoneFromMessage($message);
+        if ($phone) {
+            $this->conversation->updateExtracted($session, ['customer_phone' => $phone]);
+        }
+    }
+
+    // ── Gemini returned a follow-up question ──────────────────
+    $this->conversation->addMessage($session, 'model', $response['message']);
+
+    return response()->json([
+        'type'    => 'message',
+        'message' => $response['message'],
+    ]);
+}
+
+/**
+ * Extract phone number from raw message text.
+ */
+private function extractPhoneFromMessage(string $message): ?string
+{
+    // Match Lebanese phone numbers
+    if (preg_match('/\b(03|70|71|76|78|79|81)\d{6}\b/', $message, $matches)) {
+        return $matches[0];
+    }
+    // With spaces: 03 123 456
+    if (preg_match('/\b(03|70|71|76|78|79|81)\s?\d{3}\s?\d{3,4}\b/', $message, $matches)) {
+        return preg_replace('/\s/', '', $matches[0]);
+    }
+    return null;
+}
     /**
      * Gemini collected all 4 fields.
      * Resolve area, calculate price, show confirmation to customer.

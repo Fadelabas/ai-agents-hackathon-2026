@@ -59,53 +59,61 @@ class GeminiService
      * Parse Gemini response.
      * Returns type=question or type=order_data.
      */
-  private function parseResponse(string $text): array
+ private function parseResponse(string $text): array
 {
-    $text = trim($text);
-
-    // Strip markdown code fences
+    $text    = trim($text);
     $cleaned = preg_replace('/^```(?:json)?\s*/i', '', $text);
-    $cleaned = preg_replace('/\s*```$/', '', $cleaned);
+    $cleaned = preg_replace('/\s*```$/',            '', $cleaned);
     $cleaned = trim($cleaned);
 
-    // Detect internal AI reasoning — never show to customer
-    $internalPhrases = [
+    // ── Block internal AI reasoning from reaching customer ────
+    $blockedPhrases = [
         'previous turn', 'same chat session', 'from previous',
-        'session', 'earlier in', 'you mentioned', 'as stated',
-        'based on', 'according to', 'in context'
+        'earlier in', 'you mentioned', 'as stated', 'based on',
+        'according to', 'in context', 'in the conversation',
+        'chat history', 'already provided',
     ];
-    foreach ($internalPhrases as $phrase) {
-        if (stripos($cleaned, $phrase) !== false && json_decode($cleaned) === null) {
-            return [
-                'type'    => 'question',
-                'message' => 'Kifak! Shu badak?',
-            ];
+    foreach ($blockedPhrases as $phrase) {
+        if (stripos($cleaned, $phrase) !== false) {
+            // This is an internal AI note — never show to customer
+            return ['type' => 'question', 'message' => 'Shu badak? Kifak a3milk?'];
         }
     }
 
-    // Try JSON decode
-    $decoded = json_decode($cleaned, true);
+    // ── Block raw JSON from reaching customer ─────────────────
+    // If it looks like JSON but fails validation, hide it
+    if (str_starts_with($cleaned, '{') || str_starts_with($cleaned, '[')) {
+        $decoded = json_decode($cleaned, true);
 
-    if (
-        json_last_error() === JSON_ERROR_NONE &&
-        is_array($decoded) &&
-        !empty($decoded['task_type']) &&
-        !empty($decoded['area_text']) &&
-        !empty($decoded['exact_address']) &&
-        !empty($decoded['customer_phone'])
-    ) {
+        if (
+            json_last_error() === JSON_ERROR_NONE &&
+            is_array($decoded) &&
+            !empty($decoded['task_type']) &&
+            !empty($decoded['area_text']) &&
+            !empty($decoded['exact_address']) &&
+            !empty($decoded['customer_phone'])
+        ) {
+            // Valid complete JSON — process as order
+            return [
+                'type' => 'order_data',
+                'data' => [
+                    'task_type'         => $decoded['task_type'],
+                    'area_text'         => $decoded['area_text'],
+                    'exact_address'     => $decoded['exact_address'],
+                    'customer_phone'    => $decoded['customer_phone'],
+                    'order_description' => $decoded['order_description'] ?? null,
+                ],
+            ];
+        }
+
+        // Incomplete JSON — never show raw JSON to customer
         return [
-            'type' => 'order_data',
-            'data' => [
-                'task_type'         => $decoded['task_type'],
-                'area_text'         => $decoded['area_text'],
-                'exact_address'     => $decoded['exact_address'],
-                'customer_phone'    => $decoded['customer_phone'],
-                'order_description' => $decoded['order_description'] ?? null,
-            ],
+            'type'    => 'question',
+            'message' => 'Shu badak? 2khbarne shu bde tjeble.',
         ];
     }
 
+    // ── Normal conversational response ────────────────────────
     return [
         'type'    => 'question',
         'message' => $text,
@@ -697,7 +705,19 @@ Examples:
 - "laptop charger" → order_description: "laptop charger"
 - "groceries from spinneys" → order_description: "groceries from spinneys"
 If no specific item mentioned, use the task type as description.
-
+═══════════════════════════════════════════════════════
+ABSOLUTE RULES — NEVER BREAK THESE
+═══════════════════════════════════════════════════════
+1. NEVER show JSON to the customer as a chat message
+2. NEVER mention "previous turn", "session", "chat history"
+3. NEVER say "based on what you said" or "as mentioned"
+4. NEVER ask for a field already provided
+5. When returning JSON → output ONLY the JSON, nothing else
+6. When asking a question → output ONLY natural language, no JSON
+7. One response is either JSON OR a question, never both
+8. Do NOT confirm unless customer clearly says yes with no negation
+9. "eh bs ma talbt b3d" = NOT a confirmation → respond naturally
+10. If confused → ask "Shu badak?" in the customer's language
 CONFIRMATION RULES — VERY IMPORTANT:
 Only confirm when customer CLEARLY says yes with NO negation words.
 VALID confirmations: yes, ok, okay, aywa, na3am, tamam, mwefe2, موافق, نعم, تمام, أكيد, confirm
