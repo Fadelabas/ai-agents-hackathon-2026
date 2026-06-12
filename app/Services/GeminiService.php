@@ -53,52 +53,65 @@ class GeminiService
         }
     }
 
-    private function parseResponse(string $text): array
-    {
-        // Strip markdown fences
-        $cleaned = preg_replace('/^```(?:json)?\s*/i', '', $text);
-        $cleaned = preg_replace('/\s*```$/', '',           $cleaned);
-        $cleaned = trim($cleaned);
+private function parseResponse(string $text): array
+{
+    $cleaned = trim($text);
 
-        // Block internal AI notes
-        $blocked = ['previous turn','same chat session','from previous',
-                    'chat history','already provided','earlier in'];
-        foreach ($blocked as $phrase) {
-            if (stripos($cleaned, $phrase) !== false && !str_starts_with($cleaned, '{')) {
-                return ['type' => 'question', 'message' => 'Shu badak njeble lyom?'];
-            }
+    // Strip markdown fences
+    $cleaned = preg_replace('/^```(?:json)?\s*/i', '', $cleaned);
+    $cleaned = preg_replace('/\s*```$/', '', $cleaned);
+    $cleaned = trim($cleaned);
+
+    // ── Block ANY internal reasoning or thinking traces ───────
+    $blockedPhrases = [
+        'present)', '(present', 'previous turn', 'same chat session',
+        'from previous', 'chat history', 'already provided',
+        'wait, does', 'the user', 'let me', 'i think', 'i need to',
+        'chain of thought', 'thinking', 'internal', 'reasoning',
+        'analysis', 'draft', 'note:', 'actually,', 'hmm',
+        'so the user', 'it seems', 'based on', 'as mentioned',
+        'shaab" (', '"present"', '(present)', 'it shaab',
+    ];
+
+    foreach ($blockedPhrases as $phrase) {
+        if (stripos($cleaned, $phrase) !== false && !str_starts_with($cleaned, '{')) {
+            return [
+                'type'    => 'question',
+                'message' => 'تمام، خلينا نكمّل الطلب. بأي منطقة بدك التوصيل؟',
+            ];
         }
-
-        // Try JSON
-        if (str_starts_with($cleaned, '{')) {
-            $decoded = json_decode($cleaned, true);
-            if (
-                json_last_error() === JSON_ERROR_NONE &&
-                is_array($decoded) &&
-                !empty($decoded['task_type']) &&
-                !empty($decoded['area_text']) &&
-                !empty($decoded['exact_address']) &&
-                !empty($decoded['customer_phone'])
-            ) {
-                return [
-                    'type' => 'order_data',
-                    'data' => [
-                        'task_type'         => $decoded['task_type'],
-                        'area_text'         => $decoded['area_text'],
-                        'exact_address'     => $decoded['exact_address'],
-                        'customer_phone'    => $decoded['customer_phone'],
-                        'order_description' => $decoded['order_description'] ?? null,
-                        'special_notes'     => $decoded['special_notes'] ?? null,
-                    ],
-                ];
-            }
-            // Incomplete JSON — hide from customer
-            return ['type' => 'question', 'message' => 'Shu badak njeble?'];
-        }
-
-        return ['type' => 'question', 'message' => $text];
     }
 
+    // ── Try JSON ──────────────────────────────────────────────
+    if (str_starts_with($cleaned, '{')) {
+        $decoded = json_decode($cleaned, true);
+
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            return [
+                'type' => 'order_data',
+                'data' => [
+                    'task_type'         => $decoded['task_type']         ?? null,
+                    'order_description' => $decoded['order_description'] ?? null,
+                    'area_text'         => $decoded['area_text']         ?? null,
+                    'exact_address'     => $decoded['exact_address']     ?? null,
+                    'customer_phone'    => $decoded['customer_phone']    ?? null,
+                    'special_notes'     => $decoded['special_notes']     ?? null,
+                ],
+            ];
+        }
+
+        // Malformed JSON — never show to customer
+        return ['type' => 'question', 'message' => 'Shu badak njeble?'];
+    }
+
+    // ── Block responses that look like fragments ──────────────
+    // If response is very short and weird (less than 5 chars or has quotes mid-sentence)
+    if (strlen($cleaned) < 5 || substr_count($cleaned, '"') > 2) {
+        return ['type' => 'question', 'message' => 'Kifak! Shu badak?'];
+    }
+
+    return ['type' => 'question', 'message' => $cleaned];
+}
     private function formatHistory(array $history): array
     {
         return array_map(fn($m) => [
