@@ -34,10 +34,16 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
-  'gemini' => [
+'gemini' => [
     'key' => env('GEMINI_API_KEY'),
-    'model' => env('GEMINI_MODEL', 'gemini-1.5-flash'),
-    'endpoint' => 'https://generativelanguage.googleapis.com/v1beta/models/',
+    'model' => env('GEMINI_MODEL', 'gemini-2.0-flash'),
+    'endpoint' => env('GEMINI_ENDPOINT', 'https://generativelanguage.googleapis.com/v1beta/models/'),
+],
+
+'openai' => [
+    'key' => env('OPENAI_API_KEY'),
+    'model' => env('OPENAI_MODEL', 'gpt-4.1-mini'),
+    'endpoint' => env('OPENAI_ENDPOINT', 'https://api.openai.com/v1/chat/completions'),
 ],
 
 ];
