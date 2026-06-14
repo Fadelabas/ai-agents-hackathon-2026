@@ -14,7 +14,8 @@ class GeminiService
     public function __construct()
     {
         $this->apiKey   = config('services.openai.key');
-        $this->model    = config('services.openai.model', 'gpt-4o-mini');
+        $this->model    = config(
+            'services.openai.model', 'gpt-4o-mini');
         $this->endpoint = config('services.openai.endpoint', 'https://api.openai.com/v1/chat/completions');
     }
 
